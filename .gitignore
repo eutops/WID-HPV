@@ -1,0 +1,10 @@
+/0-data/figures
+/0-data/figures/*
+/0-data/tables
+/0-data/tables/*
+/1-source-codes/analysis-pipeline/*-output/
+/1-source-codes/analysis-pipeline/*-output/*
+/2-markdown/*
+!/2-markdown/*.Rmd
+.*
+!/.gitignore

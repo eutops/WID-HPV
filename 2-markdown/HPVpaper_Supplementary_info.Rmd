@@ -1,0 +1,334 @@
+---
+title: "HPV-induced host epigenetic reprogramming is lost upon progression to high-grade cervical intraepithelial neoplasia"
+author: "Supplementary Materials 1"
+date: ""
+output:
+  pdf_document:
+    toc: false
+    latex_engine: xelatex
+header-includes:
+  \usepackage{fontspec}
+  \usepackage[utf8]{inputenc}
+  \usepackage{pdfpages}
+  \usepackage{graphicx}
+  \setmainfont{Arial}
+---
+
+```{r, echo=FALSE, message = FALSE, warning = FALSE}
+library(knitr)
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(kableExtra)
+library(ggbeeswarm)
+library(gghalves)
+library(patchwork)
+library(ggpubr)
+
+knitr::opts_chunk$set(echo=FALSE, message = FALSE, warning = FALSE)
+
+theme_set(theme_minimal())
+```
+
+Chiara Herzog\*, Charlotte D. Vavourakis\*, James E. Barrett, Gerlinde Karbon, Andreas Villunger, Jiangrong Wang, Karin Sundström, Joakim Dillner, Martin Widschwendter
+
+
+\* contributed equally
+
+\tableofcontents
+
+\subsection{Supplementary Table 1. Participant characteristics.}
+
+```{r}
+## code commented out - saved as PDF for formatting. code below describes step for generating tables
+# library(dplyr)
+# library(tidyverse)
+# library(gtsummary)
+# library(gt)
+# theme_gtsummary_compact()
+# 
+# dat_cin <- readRDS("../0-data/pheno_P1.Rds")
+# 
+# dat_cin$set <- dat_cin$split
+# 
+# data <- dat_cin %>%
+#   select(-c(grep("hepidish", colnames(dat_cin)), EGA_pheno_ID, pcgtage, ic, WID_HPV, median_methylation_apoptosis, index_apoptosis, split)) %>%
+#   mutate(set = case_when(set == "training set" ~ "Training set",
+#                          set == "hold out test set" ~ "Test set",
+#                          set == "CIN validation set" ~ "CIN set")) %>%
+#   mutate(set = factor(set, levels = c("Training set",
+#                                       "Test set",
+#                                       "CIN set"))) %>%
+#   mutate(type = case_when(type %in% c("Control_NEG", "Control_POS") ~ "No cytological changes",
+#                           type == "CIN1" ~ "CIN1",
+#                           type == "CIN2" ~ "CIN2",
+#                           type == "CIN3+" ~ "CIN3+"),
+#          HPV = case_when(HPV == "NEG" ~ "HPV-",
+#                          HPV == "POS" ~ "HPV+",
+#                          HPV == "Unknown" ~ "Unknown",
+#                          type == "CIN3+" & is.na(HPV) ~ "HPV+")) %>%
+#   mutate(HPV_genotype2 = case_when(grepl("16", HPV_genotype) ~ "HPV16/18",
+#                                    grepl("18", HPV_genotype) ~ "HPV16/18",
+#                                   HPV_genotype=="no HPV detected" ~ "no HPV detected",
+#                                   HPV_genotype == "other oncogenic HPV" ~ "other oncogenic HPV",
+#                                   is.na(HPV_genotype) ~ "Unknown")) %>%
+#   mutate(HPV_genotype2 = factor(HPV_genotype2, levels = c("HPV16/18",
+#                                                         "other oncogenic HPV",
+#                                                         "no HPV detected",
+#                                                         "Unknown"))) %>%
+#   mutate(type = factor(type, levels = c("No cytological changes",
+#                        "CIN1",
+#                        "CIN2",
+#                        "CIN3+"))) %>%
+#   select(-HPV_genotype)
+# 
+# 
+# tbl <- data %>%
+#   tbl_strata(strata = set,
+#            .tbl_fun=
+#              ~ .x %>%
+#              tbl_summary(by = HPV,
+#                          type = list(age ~ "continuous"),
+#                          label = list(age ~ "Age",
+#                                       type ~ "Cytological diagnosis",
+#                                       HPV_genotype2 ~ "HPV subtype")) %>%
+#   modify_header(update = all_stat_cols() ~"**{level}**<br>n = {n}") %>%
+#   bold_labels() %>%
+#   modify_footnote(everything() ~ NA))
+# 
+# t1 <- tbl %>%
+#   as_gt() %>%
+#   text_transform(locations = cells_body(),
+#                fn = function(x){
+#                  paste0(ifelse(x == "0 (0%)", "", x))}
+# ) %>%
+#   tab_options(
+#   table.font.size = 10,
+#   table.font.names = "Arial",
+#   table.width = px(650)
+# )
+# 
+# t1 %>%
+#   gtsave("../0-data/tables/table-s1.html")
+# 
+# pagedown::chrome_print("../0-data/tables/table-s1.html", output = "../0-data/tables/table-s1.pdf")
+```
+
+\includegraphics[trim=2cm 10cm 2cm 2cm, clip]{../0-data/tables/table-s1.pdf}
+
+
+\pagebreak
+
+\subsection{Supplementary Table 2. Annotation of the 27 WID-HPV-index CpGs.} CpGs were annotated using the IlluminaHumanMethylationEPICanno.ilm10b4.hg19 R package (Bioconductor). Methylation status relates to mean delta-beta of the epithelial component (inferred immune cell composition = 0) in HPV- compared to HPV+ cytology negative samples in the training set.
+
+```{r, echo=FALSE, message = FALSE, warning = FALSE}
+
+# load summary on index CpGs
+dat <- readRDS("../1-source-codes/analysis-pipeline/6-output/annotation_WID-HPV_index_CpGs.Rds")
+dat <- dat %>% dplyr::rename(Probe.type=Infinium.Probe.Type, Methylation.status=methylation.epithelial) 
+colnames(dat) <- gsub("\\.", " ", colnames(dat))
+rownames(dat) <- NULL
+kable(dat) %>% kableExtra::kable_styling(latex_options = "HOLD_position") %>% column_spec(3,italic=T)
+
+```
+
+
+\pagebreak
+
+\subsection{Supplementary Table 3. Annotation of the 114 apoptosis index CpGs.} CpGs were annotated using IlluminaHumanMethylationEPICanno.ilm10b4.hg19 R package (Bioconductor). Methylation status relates to mean delta-beta for control cell lines versus cell lines grown in the presence of BH3 mimetics in the training set.
+
+```{r, echo=FALSE, message = FALSE, warning = FALSE}
+
+# load summary on index CpGs
+dat <- readRDS("../1-source-codes/analysis-pipeline/14-output/annotation_apoptosis_index_CpGs.Rds")
+dat <- dat %>% dplyr::rename(Probe.type=Infinium.Probe.Type, Methylation.status=methylation.mean) 
+colnames(dat) <- gsub("\\.", " ", colnames(dat))
+rownames(dat) <- NULL
+kable(dat,"latex", longtable=T) %>% kableExtra::kable_styling(latex_options = c("HOLD_position","repeat_header")) %>% column_spec(3,italic=T)
+
+```
+
+\pagebreak
+
+
+```{r, warning = FALSE, message=FALSE, fig.width=12,fig.height=4}
+## load and arrange CIN data
+dat_cin <- readRDS("../0-data/pheno_P1.Rds")
+
+# adjust WID_HPV for age and ic
+fit <- lm(WID_HPV ~ age + ic, data = dat_cin[dat_cin$type=="Control_NEG" & dat_cin$split == "hold out test set",]) # adjusting using controls only (from hold out test set)
+dat_cin$WID_HPV_adj <- dat_cin$WID_HPV - predict(fit, newdata = dat_cin) # Obtaining adjusted value (residuals) after accounting for differences in age and IC
+
+# arrange factor "type" (sample groups) for uniform plotting
+dat_cin$type <- factor(dat_cin$type, levels = c("Control_NEG", "Control_POS", "CIN1", "CIN2", "CIN3+"))
+type.labs <- c("HPV-ve/cyt-ve", "HPV+ve/cyt-ve", "CIN1", "CIN2", "CIN3+")
+names(type.labs) <- c("Control_NEG", "Control_POS", "CIN1", "CIN2", "CIN3+")
+cin.colours <- c("#00A087FF", "#3C5488FF", "#7E6148FF", "#F39B7FFF", "#DC0000FF")
+cin.colours2 <- c("#00A08799","#3C548899", "#7E614899", "#F39B7F99", "#DC000099")
+names(cin.colours) <- c("Control_NEG", "Control_POS", "CIN1", "CIN2", "CIN3+")
+names(cin.colours2) <- c("Control_NEG", "Control_POS", "CIN1", "CIN2", "CIN3+")
+
+# remove samples used for training and HPV-ve/cyt-ve group
+dat <- dat_cin %>% filter(split != "train") %>% filter(type != "Control_NEG") %>% droplevels()
+
+# frequency subtypes in each group
+# gsub oncogenic HPV for oncogenicHPV
+dat$HPV_genotype <- gsub("HR", "oncogenic HPV", dat$HPV_genotype)
+dat$HPV_genotype <- factor(dat$HPV_genotype, levels=c("HPV 16", "HPV 16 and other oncogenic HPV", "HPV 16 and 18", "HPV 16, 18 and other oncogenic HPV", "HPV 18", "HPV 18 and other oncogenic HPV", "other oncogenic HPV", "no HPV detected")) #arrange levels
+
+genotype.colors <- c("#FF24EC","#E82048","#E8C802","#E88502","#99FF14","#07EB85", "#0781E8","#08EBFF","#808080")
+
+p1 <- dat %>%
+  ggplot(aes(x = type, fill = HPV_genotype)) + 
+  geom_bar(position = "fill") +
+  ylab("Proportion") +
+  xlab("") +
+  labs(fill="") +
+  scale_x_discrete(labels = type.labs) +
+  scale_fill_manual(values=genotype.colors) +
+  theme_minimal()
+
+#dat_tab <- table(dat$HPV_genotype, dat$type)#contingecy table
+#dat_tab <- prop.table(dat_tab, margin=2) #relative frequencies, with sum of each type equal to 1 
+#barplot(dat_tab)
+
+# HPV16+HPV18 in relation to HPV
+dat2 <- dat %>% 
+  filter(!HPV_genotype %in% c("no HPV detected", NA)) %>% #remove samples where no HPV was detected
+  mutate(HPV_genotype2 = case_when(HPV_genotype == "other oncogenic HPV" ~ "other oncogenic HPV", TRUE ~ "HPV16 and/or HPV18")) # rearrange genotypes
+
+genotype2.colors <- c("#FF6347","#0781E8")
+
+p2 <- dat2 %>%
+  ggplot(aes(x = type,
+             y = WID_HPV_adj, fill=HPV_genotype2)) +
+  geom_half_boxplot(width=0.75)+
+  geom_half_point(transformation = position_jitter(), size=0.3,aes(color=HPV_genotype2)) +
+  ylab("WID-HPV") +
+  xlab("") +
+  labs(fill="", color="") +
+  scale_x_discrete(labels = type.labs) +
+  scale_fill_manual(values=genotype2.colors) +
+  scale_color_manual(values=genotype2.colors) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black")
+
+(plot <- p1 + p2 + plot_annotation(tag_levels = 'a'))
+
+```
+
+\subsection{Supplementary Figure 1. Stratified analysis by oncogenic HPV subtypes.}
+
+**A** Proportion of HPV subtypes detected by qPCR for each sample group defined in the CIN dataset. Samples used for training the WID-HPV index were excluded. Other oncogenic HPV subtypes detected were 31, 33, 35, 39, 45, 51, 52, 56, 58, 59, 66, 68, or a combination thereof. **B** Performance of the WID-HPV in HPV16/18 positive samples versus other oncogenic HPV genotypes in the CIN dataset. Samples used for index training and those where no HPV was detected were excluded. Box plots give median and interquartile range, with whiskers showing 1.5 times the 25th and 75th percentile and dots the outliers.
+
+\pagebreak
+
+```{r, warning = FALSE, message=FALSE, fig.width=15,fig.height=12}
+
+cell_cols <- c("#7A12FF","#1E82FF","#10D0E8","#1CFFB0")
+apo_cols <- c("#D95F02","#109DB7","#D8C99E")
+OC_cols <- c("#FF5C0D","#FF008A","#BC0CE8","#5B03FF")
+
+
+## percentage of dead cells, controls vs mims at different time points
+df <- readRDS("../0-data/Cell_line_test_BH3mims.Rds")
+
+p1 <- df %>%
+  ggplot(aes(x=timepoint, 
+             y=DC_percent, fill = cell_line)) +
+  geom_bar(position="dodge", stat="identity")+
+  geom_hline(yintercept=50, linetype="dashed", color = "black") +
+  facet_wrap(~cell_line, strip.position = "top",scales = "free_x", ncol=4) +
+  theme_minimal() +
+  theme(panel.spacing.x = unit(0, "pt"), 
+        strip.placement = "outside", 
+        strip.background.x = element_blank(),
+        axis.line.x = element_line(size = .1),
+        panel.grid.major.y = element_line(linetype = "dotted"),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.position="") +
+  xlab("Timepoint/treatment") +
+  ylab("% dead cells") +
+  #ylim(0,100)+
+  labs(fill="") +
+  scale_fill_manual(values=cell_cols) +
+  annotate("rect", xmin = 0.5, xmax=2.5, ymin = -5, ymax=-2.5, fill = apo_cols[1]) +
+  annotate("rect", xmin =2.5, xmax=3.5, ymin = -5, ymax=-2.5, fill = apo_cols[2]) +
+  annotate("rect", xmin=3.5,xmax=4.5, ymin = -5, ymax=-2.5, fill = apo_cols[3]) +
+  ggtitle("Induction of apoptosis with BH3 mimetics")
+
+#make dataframe for annotation label
+#dat_text <- data.frame(cell_line = levels(df$cell_line),
+                       #labels = c("","","- = DMSO (control) \n + = S63845/ABT-737",""))
+
+#p1 <- p1 + geom_text(data = dat_text, mapping = aes(x = 2, y = 90, label = labels, hjust=0)) 
+
+# Draw ggplot2 plot with custom legend only
+legend <- ggplot() + xlim(0, 1) + ylim(0, 1) +                  
+  annotate("text",x = 0,y = 1,size = 5,label = " - = DMSO (control) \n + = S63845/ABT-737", hjust=0, vjust =1) +theme_void()
+
+## performance apoptosis index in train and test set
+dat <- readRDS("../1-source-codes/analysis-pipeline/15-output/pheno_mims_apo_index.Rds")
+
+sets.labs <- c(paste("Training set \n n=", sum(dat$split=='training set')), 
+               paste("Test set \n n=", sum(dat$split=='hold out test set')))
+names(sets.labs) <- c("training set", "hold out test set")
+
+dat$BH3.mims_type <- factor(dat$BH3.mims_type, levels=c("control", "early apoptosis", "late apoptosis"))
+
+p2 <- dat %>%
+  ggplot(aes(x = split,
+             y = apop_index, color = BH3.mims_type)) +
+  geom_jitter(width=0.25) +
+  labs(y = "Apoptosis index", x = "") +
+  scale_x_discrete(labels = sets.labs) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_color_manual(values = apo_cols)  +
+  ylim(-1.5,1.5)+
+  labs(color="") +
+  ggtitle("Index performance: BH3 mimetics")
+
+#legend2 <- get_legend(p2) 
+
+## performance apoptosis index in HGSOC external set
+dat <- readRDS("../1-source-codes/analysis-pipeline/15-output/pheno_GSE168225.Rds")
+
+#rearrange factors
+dat$type <- factor(dat$type, levels=c("control","azacitidine+carboplatin"))
+dat$characteristics_ch1.1 <- gsub("cell line: ", "", dat$characteristics_ch1.1)
+
+p3 <- dat %>%
+  ggplot(aes(x = type, 
+             y= apop_index, group=characteristics_ch1.1)) + 
+  geom_point() +
+  geom_line() +
+  labs(y = "Apoptosis index", x = "")+
+  aes(color=characteristics_ch1.1) +
+  scale_color_manual(values=OC_cols)+
+  labs(color="") +
+  ggtitle("External validation: HGSOC cell lines")
+
+# final plot
+
+legend <- legend + plot_layout(tag_level = 'new') #avoid labeling legend
+
+layout <- 
+"
+AAAD
+AAA#
+BBCC
+BBCC"
+
+p1 + p2 +p3 + plot_annotation(tag_levels = 'a') + legend + plot_layout(design=layout)
+
+```
+
+\subsection{Supplementary Figure 2. Experimental design of BH3 mimetics treatment and development of the apoptosis index.}
+
+**A** Four cancer cell lines were grown in the presence of the BH3 mimetics S63845 and ABT-737 and collected at two different time points, reflecting early and late stages of apoptosis, respectively. "Control" cancer cell lines were grown in the presence of DMSO and pooled for the two time points, as no significant apoptosis was expected at either timepoints when incubating only in DMSO. **B** Apoptosis index performance in the test set and training set. **C** Apoptosis index calculated for an EPIC methylation array dataset of high-grade serous ovarian cancer cell lines in which apoptosis was induced with azacitidine and carboplatin treatment. 10-30% apoptosis were reported by the authors of the original study (Wong-Brown et al., 2022). 
+
+\pagebreak
+
+\includegraphics[trim=0 0cm 0 0, clip]{../0-data/figures/Fig_S3.pdf}
+
+\subsection{Supplementary Figure 3. Overview of cervical screening samples used in this study.}
