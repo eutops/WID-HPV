@@ -1,5 +1,5 @@
-/0-data/figures
 /0-data/figures/*
+!/0-data/figures/Fig_1.pdf
 /0-data/tables
 /0-data/tables/*
 /1-source-codes/analysis-pipeline/*-output/
