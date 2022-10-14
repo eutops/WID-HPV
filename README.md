@@ -1,5 +1,5 @@
 # CIN_HPV
-Code accompanying the paper submitted to Cell Host and Microbe "HPV-induced epigenetic reprogramming of the host genome is lost upon progression to high-grade cervical intraepithelial neoplasia" <br>
+Code accompanying the paper submitted to Nature Communications "HPV-induced epigenetic reprogramming of the host genome is lost upon progression to high-grade cervical intraepithelial neoplasia" <br>
 
 ## Scope and data availability
 One dataset generated using Illumina MethlyationEPIC bead chips, previously used for the discovery of cervical intraepithelial neoplasia grade 3 and above was reanalyzed. 
