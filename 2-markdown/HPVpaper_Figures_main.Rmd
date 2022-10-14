@@ -23,17 +23,15 @@ library(tidyverse)
 library(ggbeeswarm)
 library(gghalves)
 library(pROC)
-library(viridis)
-library(ComplexHeatmap)
-library(ggplotify)
 library(ggpubr)
+#library(kableExtra)
+library(gtsummary)
+library(gt)
+theme_gtsummary_compact()
+
 knitr::opts_chunk$set(echo=FALSE, message = FALSE, warning = FALSE)
 
 theme_set(theme_minimal())
-
-# load helper functions
-source("../1-source-codes/plot_roc_dichot.R")
-source("../1-source-codes/GOplot_methyl.R")
 
 ```
 
@@ -48,11 +46,11 @@ Chiara Herzog\*, Charlotte D. Vavourakis\*, James E. Barrett, Gerlinde Karbon, A
 \pagebreak
 
 ```{r, warning = FALSE, message=FALSE, fig.width=15, fig.height=8}
-#-------- Cell composition in training (Fig 1A)
+# # -------- Cell composition in training (Fig 1B)
 # dat_cin <- readRDS("../0-data/pheno_P1.Rds")
-#
+# 
 # cin.colours2 <- c("#00A08799","#3C548899", "#7E614899", "#F39B7F99", "#DC000099")
-#
+# 
 # dat <- dat_cin %>%
 #   pivot_longer(grep("hepidish", colnames(dat_cin)),
 #                names_to = "celltype",
@@ -74,7 +72,7 @@ Chiara Herzog\*, Charlotte D. Vavourakis\*, James E. Barrett, Gerlinde Karbon, A
 #                               celltype == "hepidish_CD4T" ~ "CD4+ T cells",
 #                               celltype == "hepidish_B" ~ "B cells")) %>%
 #   mutate(celltype = factor(celltype, levels = c("Eosinophils",
-#                                                 "CD8+ T cells", 
+#                                                 "CD8+ T cells",
 #                                                 "CD4+ T cells",
 #                                                 "B cells",
 #                                                 "NK cells",
@@ -100,13 +98,16 @@ Chiara Herzog\*, Charlotte D. Vavourakis\*, James E. Barrett, Gerlinde Karbon, A
 #                     aesthetics = "fill") +
 #   xlab("") +
 #   ylab("Proportion")
-#
-#-------- DELTA BETA histogram plot (Fig 1A)
+# 
+# ggsave(celltypes, filename = "../0-data/figures/fig1b.pdf",
+#        width = 3.1, height = 3.5, dpi = 300)
+# 
+# #-------- DELTA BETA histogram plot (Fig 1C)
 # dat <- readRDS("../0-data/delta-beta.Rds")
 # 
 # cin.colours2 <- c("#00A08799","#3C548899", "#7E614899", "#F39B7F99", "#DC000099")
 # 
-# plot <- ggplot(dat,aes(x=db))+ 
+# dbplot <- ggplot(dat,aes(x=db))+
 #   geom_histogram(data=subset(dat,Tissue=='Epithelial'),
 #                  aes(y=..count../sum(..count..),
 #                      fill=Tissue),
@@ -126,10 +127,15 @@ Chiara Herzog\*, Charlotte D. Vavourakis\*, James E. Barrett, Gerlinde Karbon, A
 #   ylab("Frequency") +
 #   theme(panel.grid = element_blank(),
 #         legend.position = "top")
-
-#-------- Training - N (Figure 1A)
-# readRDS("../0-data/n_training.Rds")
-# plot <- n_tr %>%
+# 
+# ggsave(dbplot, filename = "../0-data/figures/fig1c.pdf",
+#        width = 3.5, height = 3.5, dpi = 300)
+# 
+# 
+# 
+# #-------- Training - N (Figure 1D)
+# n_tr <- readRDS("../0-data/n_training.Rds")
+# trplot <- n_tr %>%
 #   ggplot(aes(x = n_seq,
 #              y = oob_auc)) +
 #   geom_line(size = 1,
@@ -143,366 +149,211 @@ Chiara Herzog\*, Charlotte D. Vavourakis\*, James E. Barrett, Gerlinde Karbon, A
 #   coord_cartesian(xlim = c(0,5000)) +
 #   xlab("Number of top differentially methylated CpGs\nused as input") +
 #   ylab("Out-of-bag AUC estimate")
-
-
-
-# final output can also be used from analysis-pipeline/15-output
-
-## load WID-HPV calculated for CIN data, alongside phenotypic information
-dat_cin <- readRDS("../0-data/pheno_P1.Rds")
-
-# adjust WID_HPV for age and ic
-fit <- lm(WID_HPV ~ age + ic, data = dat_cin[dat_cin$type=="Control_NEG" & dat_cin$split == "hold out test set",])
-dat_cin$WID_HPV_adj <- dat_cin$WID_HPV - predict(fit, newdata = dat_cin)
-
-# arrange factor "type" (sample groups) for uniform plotting
-dat_cin$type <- factor(dat_cin$type, levels = c("Control_NEG", "Control_POS", "CIN1", "CIN2", "CIN3+"))
-
-type.labs <- c("HPV-/cyt-", "HPV+/cyt-", "CIN1", "CIN2", "CIN3+")
-names(type.labs) <- c("Control_NEG", "Control_POS", "CIN1", "CIN2", "CIN3+")
-#cin.colours <- c("#00A087FF", "#3C5488FF", "#7E6148FF", "#F39B7FFF", "#DC0000FF")
-cin.colours2 <- c("#00A08799","#3C548899", "#7E614899", "#F39B7F99", "#DC000099")
-#names(cin.colours) <- c("Control_NEG", "Control_POS", "CIN1", "CIN2", "CIN3+")
-names(cin.colours2) <- c("Control_NEG", "Control_POS", "CIN1", "CIN2", "CIN3+")
-type.labs.3 <- c("HPV+/cyt-", "CIN1", "CIN2", "CIN3+") #HPV-v/cyt-ve removed
-names(type.labs.3) <- c("Control_POS", "CIN1", "CIN2", "CIN3+")
-cin.colours3 <- c("#3C548899", "#7E614899", "#F39B7F99", "#DC000099")
-names(cin.colours3) <- c("Control_POS", "CIN1", "CIN2", "CIN3+")
-
-# # subplot experimental design
-# p1 <- ggplot() + geom_blank() +theme_bw()
+# ggsave(trplot, filename = "../0-data/figures/fig1d.pdf",
+#        width = 3.5, height = 3.5, dpi = 300)
 # 
-# # subplot performance:
-# # 1. retain only data from cyt-ve women used to validate the WID-HPV;
-# # 2. add dichotom var for age;
-# # 3. set case/control
-# # 4. sort factor levels (dichot var)
-# # 5. sort type levels
+# # WID-HPV v immune cell proportion/age (Figure 1E/F)
+# dat_cin <- readRDS("../0-data/pheno_P1.Rds")
 # 
-# dat2ROC <- dat_cin %>% 
+# # adjust WID_HPV for age and ic
+# fit <- lm(WID_HPV ~ age + ic, data = dat_cin[dat_cin$type=="Control_NEG" & dat_cin$split == "hold out test set",])
+# dat_cin$WID_HPV_adj <- dat_cin$WID_HPV - predict(fit, newdata = dat_cin)
+# 
+# # arrange factor "type" (sample groups) for uniform plotting
+# dat_cin$type <- factor(dat_cin$type, levels = c("Control_NEG", "Control_POS", "CIN1", "CIN2", "CIN3+"))
+# 
+# type.labs1 <- c("HPV-/cyt-", "HPV+/cyt-")
+# names(type.labs1) <- c("Control_NEG", "Control_POS")
+# cin.colours1 <- c("#00A08799","#3C548899")
+# names(cin.colours1) <- c("Control_NEG", "Control_POS")
+# 
+# icplot <- dat_cin %>% 
 #   filter(split == "hold out test set" & type %in% c("Control_NEG","Control_POS")) %>%
-#   mutate(dichotom_var = case_when(age < 30 ~ "below 30",age >= 30 ~"above 30"), 
-#          type2 = case_when(type == "Control_POS"~ "case",type == "Control_NEG" ~"control")) %>% 
-#   mutate(dichotom_var = factor(dichotom_var, levels = c("below 30","above 30")),
-#          type2 = factor(type2, levels = c("control","case"))) %>%
-#   droplevels() 
-# 
-# library(RColorBrewer)
-# # Plot 2: ROC (by age)
-# p2 <- plot_roc_dichot(dat2ROC$type2,
-#                       dat2ROC$WID_HPV_adj,
-#                       dat2ROC$dichotom_var,
-#                       col2 = "coral3",
-#                       col3 = "burlywood3")
-# 
-# ggsave(p2, file = "../../plots-ch/auc_hpv.pdf",
-#        width = 3.5, height = 3.5)
-# 
-# # subplot violins ctrls -> CIN3+
-# type.labs[names(type.labs) == "Control_NEG"] <- "HPV-"
-# type.labs[names(type.labs) == "Control_POS"] <- "HPV+"
-# 
-# HPV+/HPV-
-# tmp <- dat_cin[dat_cin$split != "training set",]
-# # HPV+/HPV-
-# ref <- tmp$type == "Control_NEG"
-# comp <- tmp$type == "Control_POS"
-# hpvpos <- signif(p.adjust(wilcox.test(tmp[ref,]$WID_HPV_adj,
-#                           tmp[comp,]$WID_HPV_adj)$p.value,
-#                        n = 5,
-#                        method = "bonferroni"), 2)
-# 
-# comp <- tmp$type == "CIN1"
-# cin1 <- signif(p.adjust(wilcox.test(tmp[ref,]$WID_HPV_adj,
-#                           tmp[comp,]$WID_HPV_adj)$p.value,
-#                  n = 5,
-#                  method = "bonferroni"), 2)
-# 
-# 
-# comp <- tmp$type == "CIN2"
-# cin2 <- signif(p.adjust(wilcox.test(tmp[ref,]$WID_HPV_adj,
-#                     tmp[comp,]$WID_HPV_adj)$p.value,
-#                  n = 5,
-#                  method = "bonferroni"), 2)
-# 
-# comp <- tmp$type == "CIN3+"
-# cin3 <- p.adjust(wilcox.test(tmp[ref,]$WID_HPV_adj,
-#                     tmp[comp,]$WID_HPV_adj)$p.value,
-#                  n = 5,
-#                  method = "bonferroni")
-# 
-# # All + v CIN3+
-# ref <- tmp$type %in% c("Control_POS", "CIN1", "CIN2")
-# comp <- tmp$type == "CIN3+"
-# cin3_all <- signif(p.adjust(wilcox.test(tmp[ref,]$WID_HPV_adj,
-#                     tmp[comp,]$WID_HPV_adj)$p.value,
-#                     n = 5,
-#                     method = "bonferroni"),2)
-# 
-# 
-# 
-# 
-# p3 <- tmp %>%
-#   filter(split != "training set") %>%
-#   ggplot(aes(x = type,
-#              y = WID_HPV_adj,
-#              fill=type)) +
-#   geom_half_boxplot(width=0.2)+
-#   geom_half_violin() +
-#   geom_half_point(transformation = position_jitter(),size=0.3,aes(color=type)) +
+#   droplevels() %>%
+#   ggplot(aes(x = ic,
+#              y = WID_HPV,
+#              colour = type)) +
+#   geom_point() +
+#   geom_smooth(method = "lm",
+#               se = FALSE) +
+#   xlab("sample immune cell proportion") +
 #   ylab("WID-HPV") +
-#   xlab("") +
-#   scale_fill_manual(name="",labels=type.labs,values=cin.colours2) +
-#   scale_color_manual(name="",labels=type.labs,values=cin.colours2) +
-#   geom_hline(yintercept=0,linetype="dashed",color = "black") +
-#   theme_classic() +
-#   theme(axis.text.x=element_blank(),
-#         axis.ticks.x=element_blank(),
-#         legend.position = "top") +
-#   annotate("text",
-#            x = 2,
-#            y = 3.75,
-#            label = paste0("p = ", hpvpos),
-#            size = 3.2,
-#            colour = "gray40") +
-#   annotate("text",
-#            x = 3,
-#            y = 3.75,
-#            label = paste0("p = ", cin1),
-#            size = 3.2,
-#            colour = "gray40") +
-#   annotate("text",
-#            x = 4,
-#            y = 3.75,
-#            label = paste0("p = ", cin2),
-#            size = 3.2,
-#            colour = "gray40") +
-#   annotate("text",
-#            x = 5,
-#            y = 3.75,
-#            label = paste0("p = ", cin3),
-#            size = 3.2,
-#            colour = "gray40")
+#   theme(aspect.ratio = 1) +
+#   scale_colour_manual(name="",labels=type.labs1,values=cin.colours1) 
+# ggsave(icplot, filename = "../0-data/figures/fig1e.pdf",
+#        width = 4.75, height = 3.5, dpi = 300)
 # 
-# p3 <- tmp %>%
-#   filter(split != "training set") %>%
-#   ggplot(aes(x = type,
-#              y = WID_HPV_adj,
-#              fill=type)) +
-#   geom_half_boxplot(width=0.2)+
-#   geom_half_violin() +
-#   geom_half_point(transformation = position_jitter(),size=0.3,aes(color=type)) +
+# ageplot  <- dat_cin %>% 
+#   filter(split == "hold out test set" & type %in% c("Control_NEG","Control_POS")) %>%
+#   droplevels() %>%
+#   ggplot(aes(x = age,
+#              y = WID_HPV,
+#              colour = type)) +
+#   geom_point() +
+#   geom_smooth(method = "lm",
+#               se = FALSE) +
+#   xlab("sample donor age") +
 #   ylab("WID-HPV") +
-#   xlab("") +
-#   scale_fill_manual(name="",labels=type.labs,values=cin.colours2) +
-#   scale_color_manual(name="",labels=type.labs,values=cin.colours2) +
-#   geom_hline(yintercept=0,linetype="dashed",color = "black") +
-#   theme_classic() +
-#   theme(axis.text.x=element_blank(),
-#         axis.ticks.x=element_blank(),
-#         legend.position = "top") +
-#   annotate("segment",
-#            x = c(2, 4, 2, 3, 3, 5),
-#            xend = c(2, 4, 4, 3, 5, 5),
-#            y = c(3.5, 3.5, 3.7, 3.7, 4, 4),
-#            yend = c(3.7, 3.7, 3.7, 4, 4, 3.2),
-#            size = 0.5) +
-#   annotate("text",
-#            x = 4,
-#            y = 4.2,
-#            label = paste0("p = ", cin3_all),
-#            size = 3.1,
-#            colour = "gray40")
+#   theme(aspect.ratio = 1) +
+#   scale_colour_manual(name="",labels=type.labs1,values=cin.colours1) 
+# ggsave(ageplot, filename = "../0-data/figures/fig1f.pdf",
+#        width = 4.75, height = 3.5, dpi = 300)
 # 
+# # ROC-curve (Figure 1G)
+# source("../1-source-codes/plot_roc_slim.R")
+# dat_diseasefree <- dat_cin %>%
+#   filter(split == "hold out test set" & type %in% c("Control_NEG", "Control_POS")) %>%
+#   droplevels()
+# fit <- lm(WID_HPV ~ age + ic, data = dat_diseasefree[dat_diseasefree$type=="Control_NEG",])
+# dat_diseasefree$WID_HPV_adj <- dat_diseasefree$WID_HPV - predict(fit, newdata = dat_diseasefree)
+# auc <- plot_roc(dat_diseasefree$type,
+#                 dat_diseasefree$WID_HPV_adj)
+# ggsave(auc, filename = "../0-data/figures/fig1g.pdf",
+#        width = 3.5, height = 3.5, dpi = 300)
 # 
-# # 
-# ggsave(p3, file = "../0-data/figures/hpv-cin.pdf",
-#        width = 4.5, height = 3.5) 
-# 
-# # plot with HPV subtypes (now in supplementary)? more ROCs?
-# 
-# p4 <- ggplot() + geom_blank() + theme_bw() 
-# 
-# # print full plot
-# layout <- "
-# AAA
-# BCD
-# "
-# 
-# plot <- p1 + p2 +p3 + p4 + plot_annotation(tag_levels = 'a') + plot_layout(design = layout)
-# 
-# plot
-
 ```
 
 \includegraphics[trim=0 0cm 0 0, clip]{../0-data/figures/Fig_1.pdf}
 
-\subsection{Figure 1. WID-HPV index development and performance in relation to HPV status and cervical intraepithelial neoplasia.}
+\subsection{Figure 1. Study overview and WID-HPV training and evaluation.} \textbf{A} Study overview. Early HPV-associated host epigenome changes in the Cervix uteri were evaluated in a sample set of (cervical) disease-free, cytology-negative HPV+ or HPV- samples. Samples were split 70-30 into a training and test set and differential methylated probes determined. A HPV signature, called WID-HPV (Women's cancer risk-human papillomavirus) was derived using penalized regression models. Performance was validated in the hold-out test set. The WID-HPV was then further evaluated in association with cervical intraepithelial neoplasia progression (CIN1-3+), and its relation with cell-intrinsic factors that may influence defence mechanisms was investigated via the association with replicative age and apoptosis signatures. \textbf{B} Sample cell type composition of HPV+ and HPV- cytology negative samples. \textbf{C} Histogram of differential methylation in epithelial and immune cells, the major cell subtypes in cervical samples. \textbf{D} Out-of-bag area under the curve (AUC) estimate for the receiver operating characteristic during training of the linear WID-HPV index using penalised regression. Providing the top 500 differentially methylated epithelial CpGs as input for an L1 norm classifier (Lasso) resulted in the highest out-of-bag AUC. \textbf{E} WID-HPV versus sample immune cell proportion in the test set. \textbf{F} WID-HPV versus sample donor age in the test set. \textbf{G} Receiver operating characteristic and area under the curve (AUC) for the WID-HPV (adjusted for sample donor age and immune cell proportion, using HPV- cyt- samples) in the test set.
 
 \pagebreak
 
-```{r, warning = FALSE, message=FALSE, fig.width=15,fig.height=15}
+```{r, warning = FALSE, message=FALSE, fig.width=12,fig.height=8}
+## load and arrange CIN data
+dat_cin <- readRDS("../0-data/pheno_P1.Rds")
 
-# data for this plot will be generate in analysis-pipeline/8-output
+# adjust WID_HPV for age and ic
+fit <- lm(WID_HPV ~ age + ic, data = dat_cin[dat_cin$type=="Control_NEG" & dat_cin$split == "hold out test set",]) # adjusting using controls only (from hold out test set)
+dat_cin$WID_HPV_adj <- dat_cin$WID_HPV - predict(fit, newdata = dat_cin) # Obtaining adjusted value (residuals) after accounting for differences in age and IC
 
-# load and arrange GSEA data for bubble plots
-table <- readRDS("../0-data/GSEA_training_WID_HPV/DMPs_vs_all_result_GO.Rds")
-table <- table %>% filter(FDR<0.05) %>% rownames_to_column(var="ID") %>% droplevels # keep only significant pathways
+# arrange factor "type" (sample groups) for uniform plotting
+dat_cin$type <- factor(dat_cin$type, levels = c("Control_NEG", "Control_POS", "CIN1", "CIN2", "CIN3+"))
+type.labs <- c("HPV-ve/cyt-ve", "HPV+ve/cyt-ve", "CIN1", "CIN2", "CIN3+")
+names(type.labs) <- c("Control_NEG", "Control_POS", "CIN1", "CIN2", "CIN3+")
+type.labs.3 <- c("HPV+/cyt-", "CIN1", "CIN2", "CIN3+") #HPV-v/cyt-ve removed
+names(type.labs.3) <- c("Control_POS", "CIN1", "CIN2", "CIN3+")
+cin.colours <- c("#00A087FF", "#3C5488FF", "#7E6148FF", "#F39B7FFF", "#DC0000FF")
+cin.colours2 <- c("#00A08799","#3C548899", "#7E614899", "#F39B7F99", "#DC000099")
+cin.colours3 <- c("#3C548899", "#7E614899", "#F39B7F99", "#DC000099")
+names(cin.colours) <- c("Control_NEG", "Control_POS", "CIN1", "CIN2", "CIN3+")
+names(cin.colours2) <- c("Control_NEG", "Control_POS", "CIN1", "CIN2", "CIN3+")
+names(cin.colours3) <- c("Control_POS", "CIN1", "CIN2", "CIN3+")
 
-# number of DMPs in all genes
-gene_count <- readRDS("../0-data/GSEA_training_WID_HPV/DMP_count_siggenes_GO.Rds")
+# subplot violins ctrls -> CIN3+ (Figure 2A)
+# type.labs[names(type.labs) == "Control_NEG"] <- "HPV-"
+# type.labs[names(type.labs) == "Control_POS"] <- "HPV+"
 
-#format dataframes for plotting
-gene_count <- gene_count %>% rownames_to_column(var="ID")
-gene_count$DMP_count <- as.numeric(gene_count$DMP_count)
-table <- table %>% 
-  dplyr::rename(Category=ONTOLOGY,Term=TERM,Genes=SigGenesInSet, pval=P.DE, adj_pval=FDR)
-circ <- circle_dat(table, gene_count)
+tmp <- dat_cin[dat_cin$split != "training set",]
+# HPV+/HPV-
+ref <- tmp$type == "Control_NEG"
+comp <- tmp$type == "Control_POS"
+hpvpos <- signif(p.adjust(wilcox.test(tmp[ref,]$WID_HPV_adj,tmp[comp,]$WID_HPV_adj)$p.value,
+                          n = 5,
+                          method = "bonferroni"), 2)
+ 
+comp <- tmp$type == "CIN1"
+cin1 <- signif(p.adjust(wilcox.test(tmp[ref,]$WID_HPV_adj,tmp[comp,]$WID_HPV_adj)$p.value,
+                          n = 5,
+                          method = "bonferroni"), 2)
 
-# add number of DMPs per term to circ
-count2 <- c()#init
-terms <- unique(circ$ID)
-for (i in 1:length(terms)){
-  co <- sum(circ$DMP_count[circ$ID==terms[i]])
-  count2 <- c(count2,co)
-}
-df <- data.frame(ID=terms, count2=count2)
-circ <- full_join(circ,df)#combine data
+comp <- tmp$type == "CIN2"
+cin2 <- signif(p.adjust(wilcox.test(tmp[ref,]$WID_HPV_adj,tmp[comp,]$WID_HPV_adj)$p.value,
+                         n = 5,
+                         method = "bonferroni"), 2)
 
-# make a bubble plot
-circ$count <- as.numeric(circ$count)
-circ$pval_log <- -log(circ$pval,10)
-circ$adj_pval_log <- -log(circ$adj_pval, 10)
-circ$term <- paste0(circ$term," (", circ$ID,")")
+comp <- tmp$type == "CIN3+"
+cin3 <- p.adjust(wilcox.test(tmp[ref,]$WID_HPV_adj,tmp[comp,]$WID_HPV_adj)$p.value,
+                  n = 5,
+                  method = "bonferroni")
+ 
+# All + v CIN3+ is significant
+ref <- tmp$type %in% c("Control_POS", "CIN1", "CIN2")
+comp <- tmp$type == "CIN3+"
+cin3_all <- signif(p.adjust(wilcox.test(tmp[ref,]$WID_HPV_adj,
+                    tmp[comp,]$WID_HPV_adj)$p.value,
+                     n = 5,
+                     method = "bonferroni"),2)
+ 
+p1 <- tmp %>%
+   filter(split != "training set") %>%
+   ggplot(aes(x = type,
+              y = WID_HPV_adj,
+              fill=type)) +
+   geom_half_boxplot(width=0.2)+
+   geom_half_violin() +
+   geom_half_point(transformation = position_jitter(),size=0.3,aes(color=type)) +
+   ylab("WID-HPV") +
+   xlab("") +
+   scale_fill_manual(name="",labels=type.labs,values=cin.colours2) +
+   scale_color_manual(name="",labels=type.labs,values=cin.colours2) +
+   geom_hline(yintercept=0,linetype="dashed",color = "black") +
+   theme_classic() +
+   theme(axis.text.x=element_blank(),
+         axis.ticks.x=element_blank()) +
+   annotate("segment",
+            x = c(2, 4, 2, 3, 3, 5),
+            xend = c(2, 4, 4, 3, 5, 5),
+            y = c(3.5, 3.5, 3.7, 3.7, 4, 4),
+            yend = c(3.7, 3.7, 3.7, 4, 4, 3.2),
+            size = 0.5) +
+   annotate("text",
+            x = 4,
+            y = 4.2,
+            label = paste0("p = ", cin3_all),
+            size = 3.1,
+            colour = "gray40")
 
-# subplot go- BB
-p1 <- circ %>%
-  filter(category=="BP") %>% droplevels()%>%
-  arrange(desc(adj_pval_log)) %>%
-  ggplot(aes(x=count, y=count2, size=adj_pval_log, fill=term)) +
-    geom_point(alpha=0.5, shape=21, color="#7A0177") +
-    scale_size(range = c(min(circ$adj_pval_log), 2*max(circ$adj_pval_log))) +
-  scale_fill_brewer(palette = "RdPu", direction=-1) +
-  guides(size=guide_legend(ncol=3))+
-  theme_minimal()+
-  labs(size="-log(adj. p-val)", fill="") +
-  xlab("Number of genes in term")+
-  ylab("Number of DMPs in term")+
-  ggtitle('Enriched GO terms, Biological process')
+# remove samples used for training and HPV-ve/cyt-ve group
+dat <- dat_cin %>% filter(split != "train") %>% filter(type != "Control_NEG") %>% droplevels()
 
-# subplot go - CC
-p2 <- circ %>%
-  filter(category=="CC") %>% droplevels()%>%
-  arrange(desc(adj_pval_log)) %>%
-  ggplot(aes(x=count, y=count2, size=adj_pval_log, fill=term)) +
-    geom_point(alpha=0.5, shape=21, color="#005A32") +
-    scale_size(range = c(min(circ$adj_pval_log), 2*max(circ$adj_pval_log))) +
-  scale_fill_brewer(palette = "Greens", direction=-1) +
-  guides(size=guide_legend(ncol=3))+
-  theme_minimal()+
-  labs(size="-log(adj. p-val)", fill="") +
-  xlab("Number of genes in term")+
-  ylab("Number of DMPs in term")+
-  ggtitle('Enriched GO terms, Cellular component')
-# note that membrane-enclosed lumen (GO:0031974),organelle lumen (GO:0043233),intracellular organelle lumen (GO:0070013) completely overlap
+# frequency subtypes in each group (Figure 2B)
+# gsub oncogenic HPV for oncogenic HPV
+dat$HPV_genotype <- gsub("HR", "oncogenic HPV", dat$HPV_genotype)
+dat$HPV_genotype <- factor(dat$HPV_genotype, levels=c("HPV 16", "HPV 16 and other oncogenic HPV", "HPV 16 and 18", "HPV 16, 18 and other oncogenic HPV", "HPV 18", "HPV 18 and other oncogenic HPV", "other oncogenic HPV", "no HPV detected")) #arrange levels
 
-# subplot chord
-table_BP <- table %>% filter(Category=="BP") %>% droplevels()
-genes_BP <- c() #init
-for (i in 1:length(table_BP$Genes)){
-  out <- unlist(strsplit(table_BP$Genes[i],","))
-  genes_BP <- c(genes_BP,out)
-}
-genes_BP <- unique(genes_BP)
-gene_count_BP <- gene_count %>% filter(ID %in% genes_BP)
-circ_BP <- circle_dat(table_BP, gene_count_BP)
+# genotype.colors <- c("#D9565C", "#EA7B7C", "#EF9798", "#CFAAAB", "#39B4AE", "#109DB7", "#0C6EA5", "#172869")
+genotype.colors <- c("#B25D91", "#C37AAA", "#DAA2C9", "#D0C4DE", "#39B8B6", "#109DB7", "#0C6EA5", "#172869")
 
-# make matrix for chord plot
-N <- length(table_BP$Term) + 1
-M <- gene_count_BP[,1] 
-mat <- matrix(0, ncol = N, nrow = length(M))
-rownames(mat) <- M
-colnames(mat) <- c(table_BP$ID, 'DMPcount') 
-mat[,N] <- gene_count_BP[,2]
-for (p in 1:(N-1)){
-  dat <- subset(circ_BP, ID == table_BP$ID[p])
-  for (g in 1:length(M)) mat[g, p] <- ifelse(M[g]%in%dat$genes, 1, 0)
-    }
-chord <- mat
+p2 <- dat %>%
+  ggplot(aes(x = type, fill = HPV_genotype)) + 
+  geom_bar(position = "fill") +
+  ylab("Proportion") +
+  xlab("") +
+  labs(fill="") +
+  scale_x_discrete(labels = type.labs) +
+  scale_fill_manual(values=genotype.colors) +
+  theme_minimal()
 
-p3 <- GOChord(chord,space = 0.02, limit= c(7,0) , gene.order = 'DMPcount', gene.space = 0.25, gene.size=3) # displaying only genes in minimum 7 categories, note that this function still doesn't work for setting limits higher on DMPcount :/
-p3 <- p3 + ggtitle("Genes encompassing minimum 7 enriched GO terms, Biological process")
+#dat_tab <- table(dat$HPV_genotype, dat$type)#contingecy table
+#dat_tab <- prop.table(dat_tab, margin=2) #relative frequencies, with sum of each type equal to 1 
+#barplot(dat_tab)
 
+# HPV16+HPV18 in relation to HPV (Figure 2C)
+dat2 <- dat %>% 
+  filter(!HPV_genotype %in% c("no HPV detected", NA)) %>% #remove samples where no HPV was detected
+  mutate(HPV_genotype2 = case_when(HPV_genotype == "other oncogenic HPV" ~ "other oncogenic HPV", TRUE ~ "HPV16 and/or HPV18")) # rearrange genotypes
 
-# subplot heatmap
-## read in pre-calculated delta-beta values
-db <- readRDS("../0-data/GSEA_training_WID_HPV/deltabeta_train_dmp.Rds")
-annot_DMP_mM <- readRDS("../0-data/GSEA_training_WID_HPV/DMPs_annot_missMethyl.Rds")
-cpg_8386_annot <- readRDS("../0-data/GSEA_training_WID_HPV/cpg_8386_annot.Rds") #need this file for CpG context information
+genotype2.colors <- c("#C37AAA","#0C6EA5")
 
+p3 <- dat2 %>%
+  ggplot(aes(x = type,
+             y = WID_HPV_adj, fill=HPV_genotype2)) +
+  geom_half_boxplot()+
+  geom_half_point(transformation = position_jitter(),
+                  size=0.3,aes(color=HPV_genotype2)) +
+  ylab("WID-HPV") +
+  xlab("") +
+  labs(fill="", color="") +
+  scale_x_discrete(labels = type.labs) +
+  scale_fill_manual(values=genotype2.colors) +
+  scale_color_manual(values=genotype2.colors) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black")
 
-## filter out genes and CpGs from GO term of interest
-genes_GO_interest <- unlist(strsplit(table$Genes[table$Term=="positive regulation of DNA repair"],","))# 43 genes in term
-annot_CpGs_GO_interest <- annot_DMP_mM %>% filter(alias %in% genes_GO_interest) #62 CpGs in 43 genes
-
-## start with arranging factor gene, cause this determines order CpGs in final plot
-gene <- annot_CpGs_GO_interest %>% dplyr::select(cpg,alias)
-gene <- gene[with(gene, order(alias)),]
-gene$alias <- factor(gene$alias, levels=c(unique(gene$alias)))
-order_of_plot <- c(gene$cpg)
-gene <- gene$alias
-
-## make a matrix of the delta-beta values training set (main heatmap)
-mat1 <- db %>% dplyr::select(c(db_epithelial,db_immune,db_mean)) %>% filter(row.names(db) %in% unique(annot_CpGs_GO_interest$cpg))
-mat1 <- mat1[match(order_of_plot, row.names(mat1)),] #match order CpGs
-#identical(row.names(mat1), order_of_plot) #sanity-check
-
-## factor cgi 
-cgi <- cpg_8386_annot %>% filter(Name %in% row.names(mat1)) %>% dplyr::select(Name,Relation_to_Island) %>% droplevels()
-cgi$Relation_to_Island <- factor(cgi$Relation_to_Island, levels=c("N_Shelf","N_Shore","Island","S_Shore","S_Shelf","OpenSea"))
-cgi <- cgi[match(order_of_plot, cgi$Name),] #match order CpGs
-#identical(order_of_plot, as.character(cgi$Name)) #sanity-check
-cgi <- cgi$Relation_to_Island
-
-### factor GO term - could also add the occurence of these genes in other GO terms
-
-### colors
-cgi_col = c("Island" = magma(20)[5] ,"OpenSea" = magma(20)[18], "S_Shelf" = magma(20)[13],  "S_Shore" = magma(20)[9], "N_Shelf" = magma(20)[14],  "N_Shore" = magma(20)[10])
-#col_fun = colorRamp2(c(-0.05, 0, 0.15), c("darkblue", "white", "darkred"))
-
-### heatmap
-ht_list =
-  Heatmap(mat1, col = viridis(100), name = "Delta-beta", row_names_side = "left", row_names_gp = gpar(fontsize = 8), cluster_rows = FALSE, show_column_dend = FALSE, column_names_rot = 60, column_names_centered = TRUE,row_split = c(gene), row_title_rot = 0, row_title_gp = gpar(fontsize=8), cluster_row_slices=FALSE, border=TRUE, column_title = "Genes in term \n Positive Regulation of DNA repair") + 
-  Heatmap(cgi, name = "CGI",  width = unit(5, "mm"), cluster_rows=FALSE,
-    col = cgi_col, column_names_rot = 0, column_names_centered = TRUE)
-
-p4 <- grid2grob(draw(ht_list, merge_legends = TRUE, heatmap_legend_side = "right"))
-
-# print full plot
-layout <- "
-AAADD
-BBBDD
-CCCDD
-CCCDD
-"
-
-plot <- p1 + p2 +p3 + p4 + plot_annotation(tag_levels = 'a') + plot_layout(design = layout)
-
-plot
-
-
-```
-
-\subsection{Figure 2. Differential methylation and gene ontology analysis in HPV-infected and -uninfected samples.}
-
-\pagebreak
-
-```{r, warning = FALSE, message=FALSE, fig.width=10,fig.height=8}
-
+# correlation WID-HPV and pcgtage (Figure 2D)
 dat_cin_notrain <- dat_cin %>% filter(split != "training set") %>% droplevels()
 
-# correlation WID-HPV and pcgtage
-p1 <- dat_cin_notrain %>%
+p4 <- dat_cin_notrain %>%
   filter(type %in% c("Control_POS","CIN1","CIN2","CIN3+")) %>%
   droplevels() %>%
   ggplot(aes(x = pcgtage,
@@ -516,99 +367,163 @@ p1 <- dat_cin_notrain %>%
   stat_cor(cor.coef.name ="rho", method="spearman", label.x.npc = "middle", size=3,label.y=2) +
   labs(y = "WID-HPV", x = "log(pcgtAge)", colour="")
 
-# apoptosis hallmark genes
-ref <- dat_cin_notrain$type %in% c("Control_POS", "CIN1", "CIN2")
-comp <- dat_cin_notrain$type == "CIN3+"
-
-cin3_all <- signif(wilcox.test(dat_cin_notrain[ref,]$median_methylation_apoptosis,
-                               dat_cin_notrain[comp,]$median_methylation_apoptosis)$p.value,2)
-
-p2 <- dat_cin_notrain %>%
-  ggplot(aes(x = type,
-             y = median_methylation_apoptosis, fill=type)) +
-  geom_half_boxplot(width=0.2)+
-  geom_half_violin() +
-  geom_half_point(transformation = position_jitter(), nudge=0.05, size=0.3,aes(color=type)) +
-  ylab("Median methylation\n(apoptosis gene promoters)") +
-  xlab("") +
-  scale_x_discrete(labels = type.labs) +
-  scale_fill_manual(name="", labels=type.labs, values=cin.colours2)  +
-  theme_classic() +
-  scale_color_manual(name="", labels=type.labs, values=cin.colours2) +
-  theme(axis.text.x=element_blank(),
-        axis.ticks.x=element_blank())  +
-  annotate("segment",
-           x = c(2, 4, 2, 3, 3, 5),
-           xend = c(2, 4, 4, 3, 5, 5),
-           y = c(0.036, 0.036, 0.038, 0.038, 0.045, 0.045),
-           yend = c(0.038, 0.038, 0.038, 0.045, 0.045, 0.044),
-           size = 0.5) +
-  annotate("text",
-           x = 4,
-           y = 0.046,
-           label = paste0("p = ", cin3_all),
-           size = 3.1,
-           colour = "gray40")
-
-
-# apoptosis index CIN data
-ref <- dat_cin_notrain$type %in% c("Control_POS", "CIN1", "CIN2")
-comp <- dat_cin_notrain$type == "CIN3+"
-cin3_all <- signif(wilcox.test(dat_cin_notrain[ref,]$index_apoptosis,
-                    dat_cin_notrain[comp,]$index_apoptosis)$p.value,2)
-
-p3 <- dat_cin_notrain %>%
-  ggplot(aes(x = type,
-             y = index_apoptosis, fill=type)) +
-  geom_half_boxplot(width=0.2)+
-  geom_half_violin() +
-  geom_half_point(transformation = position_jitter(), nudge=0.05, size=0.3,aes(color=type)) +
-  ylab("Apoptosis index") +
-  xlab("") +
-  scale_x_discrete(labels = type.labs) +
-  scale_fill_manual(name="", labels=type.labs, values=cin.colours2) +
-  scale_color_manual(name="", labels=type.labs, values=cin.colours2) +
-  theme_classic() +
-  theme(axis.text.x=element_blank(),
-        axis.ticks.x=element_blank()) +
-  annotate("segment",
-           x = c(2, 4, 2, 3, 3, 5),
-           xend = c(2, 4, 4, 3, 5, 5),
-           y = c(-6.25, -6, -5.5, -5.5, -5.25, -5.25),
-           yend = c(-5.5, -5.5, -5.5, -5.25, -5.25, -5.5),
-           size = 0.5) +
-  annotate("text",
-           x = 4,
-           y = -4.75,
-           label = paste0("p = ", cin3_all),
-           size = 3.1,
-           colour = "gray40")
-
-
-# correlation WID-HPV and apoptosis index
-p4 <- dat_cin_notrain %>%
-  filter(type %in% c("Control_POS","CIN1","CIN2","CIN3+")) %>%
-  droplevels() %>%
-  ggplot(aes(x = index_apoptosis,
-             y = WID_HPV_adj)) +
-  geom_point(aes(colour=type), size=0.6) +
-   scale_color_manual(name="",labels=type.labs.3,values=cin.colours3) +
-  stat_cor(cor.coef.name ="tau", method="kendall", label.x = -17, size=3, label.y=2.5) +
-  stat_cor(cor.coef.name ="rho", method="spearman", label.x = -17, size=3,label.y=2) +
-  theme_classic() +
-  labs(y = "WID-HPV", x = "Apoptosis index", colour="")
-
-# print full plot
 layout <- "
 AB
-CD
-"
+CD"
 
-(plot <- p1 + p2 + p3 + p4 + plot_annotation(tag_levels = 'a') + plot_layout(design=layout, guides="collect"))
+(plot <- p1 + p2 + p3 + p4 + plot_annotation(tag_levels = 'A') + plot_layout(design=layout))
 
-ggsave(plot, file = "../0-data/figures/Fig_2.pdf",
-       width = 10, height = 8)
-# p values can be superscripted in Illustrator for visual purposes.
 ```
 
-\subsection{Figure 3. WID-HPV correlation with epigenetic replicative age and apoptosis.}
+\subsection{Figure 2. WID-HPV in relation to CIN, HPV oncogenic subtype and replicative age.}
+
+**A** Overlayed dot-, box- and violin plots showing WID-HPV in the groups of different samples. Samples used for index training were excluded. Box plots show median and interquartile range, with whiskers showing 1.5 times the 25th and 75th percentile and dots the outliers. Violin plots give the kernel probability density of the data in each group. P value is derived from Wilcoxon test comparing all HPV+ cytology negative (cyt-) samples, CIN1, and CIN2 samples versus CIN3+. P values for difference to HPV- cyt- samples (reference) were as follows: HPV+, p=2-9; CIN1, p=1.7-19; CIN2, p=3.1-11; CIN3, p=1 (not shown in the figure). P values were adjusted for multiple comparisons using the Bonferroni method. **B** Proportion of oncogenic HPV subtypes detected by qPCR for each sample group defined in the CIN dataset. Samples used for training the WID-HPV index were excluded. Other oncogenic HPV subtypes detected were 31, 33, 35, 39, 45, 51, 52, 56, 58, 59, 66, 68, or a combination thereof. **C** Performance of the WID-HPV in HPV16/18 positive samples versus other oncogenic HPV genotypes in the CIN dataset. Samples used for index training and those where no HPV was detected were excluded. Box plots give median and interquartile range, with whiskers showing 1.5 times the 25th and 75th percentile and dots the outliers. **D** Kendall (τ) and Spearman (ρ) correlations of the WID-HPV-index with the logarithm of the pcgtAge score for the subset of HPV+ women with respect to CIN.
+
+\pagebreak
+
+```{r, warning = FALSE, message=FALSE, fig.width=10,fig.height=8}
+# apoptosis hallmark genes
+# ref <- dat_cin_notrain$type %in% c("Control_POS", "CIN1", "CIN2")
+# comp <- dat_cin_notrain$type == "CIN3+"
+# 
+# cin3_all <- signif(wilcox.test(dat_cin_notrain[ref,]$median_methylation_apoptosis,
+#                                dat_cin_notrain[comp,]$median_methylation_apoptosis)$p.value,2)
+# 
+# medapop <- dat_cin_notrain %>%
+#   ggplot(aes(x = type,
+#              y = median_methylation_apoptosis, fill=type)) +
+#   geom_half_boxplot(width=0.2)+
+#   geom_half_violin() +
+#   geom_half_point(transformation = position_jitter(), nudge=0.05, size=0.3,aes(color=type)) +
+#   ylab("Median methylation\n(apoptosis gene promoters)") +
+#   xlab("") +
+#   scale_x_discrete(labels = type.labs) +
+#   scale_fill_manual(name="", labels=type.labs, values=cin.colours2)  +
+#   theme_classic() +
+#   scale_color_manual(name="", labels=type.labs, values=cin.colours2) +
+#   theme(axis.text.x=element_blank(),
+#         axis.ticks.x=element_blank())  +
+#   annotate("segment",
+#            x = c(2, 4, 2, 3, 3, 5),
+#            xend = c(2, 4, 4, 3, 5, 5),
+#            y = c(0.036, 0.036, 0.038, 0.038, 0.045, 0.045),
+#            yend = c(0.038, 0.038, 0.038, 0.045, 0.045, 0.044),
+#            size = 0.5) +
+#   annotate("text",
+#            x = 4,
+#            y = 0.046,
+#            label = paste0("p = ", cin3_all),
+#            size = 3.1,
+#            colour = "gray40")
+# 
+# ggsave(medapop, filename = "../0-data/figures/fig3b.pdf",
+#        width = 5.5,
+#        height = 3.5, dpi = 300)
+# 
+# 
+# # apoptosis index CIN data
+# ref <- dat_cin_notrain$type %in% c("Control_POS", "CIN1", "CIN2")
+# comp <- dat_cin_notrain$type == "CIN3+"
+# cin3_all <- signif(wilcox.test(dat_cin_notrain[ref,]$index_apoptosis,
+#                     dat_cin_notrain[comp,]$index_apoptosis)$p.value,2)
+# 
+# apopind <- dat_cin_notrain %>%
+#   ggplot(aes(x = type,
+#              y = index_apoptosis, fill=type)) +
+#   geom_half_boxplot(width=0.2)+
+#   geom_half_violin() +
+#   geom_half_point(transformation = position_jitter(), nudge=0.05, size=0.3,aes(color=type)) +
+#   ylab("Apoptosis index") +
+#   xlab("") +
+#   scale_x_discrete(labels = type.labs) +
+#   scale_fill_manual(name="", labels=type.labs, values=cin.colours2) +
+#   scale_color_manual(name="", labels=type.labs, values=cin.colours2) +
+#   theme_classic() +
+#   theme(axis.text.x=element_blank(),
+#         axis.ticks.x=element_blank()) +
+#   annotate("segment",
+#            x = c(2, 4, 2, 3, 3, 5),
+#            xend = c(2, 4, 4, 3, 5, 5),
+#            y = c(-6.25, -6, -5.5, -5.5, -5.25, -5.25),
+#            yend = c(-5.5, -5.5, -5.5, -5.25, -5.25, -5.5),
+#            size = 0.5) +
+#   annotate("text",
+#            x = 4,
+#            y = -4.75,
+#            label = paste0("p = ", cin3_all),
+#            size = 3.1,
+#            colour = "gray40")
+# ggsave(apopind, filename = "../0-data/figures/fig3c.pdf",
+#        width = 5.5,
+#        height = 3.5, dpi = 300)
+# 
+# 
+# 
+# # correlation WID-HPV and apoptosis index
+# apopcorr <- dat_cin_notrain %>%
+#   filter(type %in% c("Control_POS","CIN1","CIN2","CIN3+")) %>%
+#   droplevels() %>%
+#   ggplot(aes(x = index_apoptosis,
+#              y = WID_HPV_adj)) +
+#   geom_point(aes(colour=type), size=0.6) +
+#    scale_color_manual(name="",labels=type.labs.3,values=cin.colours3) +
+#   stat_cor(cor.coef.name ="tau", method="kendall", label.x = -17, size=3, label.y=2.5) +
+#   stat_cor(cor.coef.name ="rho", method="spearman", label.x = -17, size=3,label.y=2) +
+#   theme_classic() +
+#   labs(y = "WID-HPV", x = "Apoptosis index", colour="")
+# ggsave(apopcorr, filename = "../0-data/figures/fig3d.pdf",
+#        width = 5.5,
+#        height = 3.5, dpi = 300)
+
+```
+
+\includegraphics[trim=0 0cm 0 0, clip]{../0-data/figures/Fig_3.pdf}
+
+
+\subsection{Figure 3. WID-HPV correlation with apoptosis.}
+
+**A** Overview methods for evaluating apoptosis. **B** Overlayed dot-, box- and violin plots showing median methylation of CpGs in promotor regions from the Apoptosis Hallmark gene set (MSigDB) versus HPV and cytology status in the CIN dataset. P value derived from Wilcoxon test comparing HPV+, CIN1, and CIN2 with CIN3+ samples. **C** Overlayed dot-, box- and violin plots showing the apoptosis index constructed using BH3 mimetics on cancer cell lines versus HPV and cytology status in the CIN dataset. P value derived from Wilcoxon test comparing HPV+, CIN1, and CIN2 with CIN3+ samples. **D** Kendall (τ) and Spearman (ρ) correlations of the WID-HPV-index with the apoptosis-index for the subset of women that were HPV+ or had CIN1-3+. Box plots give median and interquartile range, with whiskers showing 1.5 times the 25th and 75th percentile and dots the outliers. Violin plots give the kernel probability density of the data in each group. Samples used for training the WID-HPV were excluded from all plots.
+
+\pagebreak
+
+\subsection{Table 1. Annotation of the 27 WID-HPV-index CpGs.} CpGs were annotated using the IlluminaHumanMethylationEPICanno.ilm10b4.hg19 R package (Bioconductor). db_epithelial is the mean delta-beta of the epithelial component (inferred immune cell composition = 0) in HPV- compared to HPV+ cytology negative samples in the training set. The mean delta-beta is positive when the repective CpG is on average hypermethylated in the HPV+ group, negative when on average hypomethylated.
+```{r, echo=FALSE, message = FALSE, warning = FALSE}
+
+# commented out, embedded resulted PDF for formatting purposes
+
+# load summary on index CpGs
+
+#dat <- readRDS("../1-source-codes/analysis-pipeline/6-output/annotation_WID-HPV_index_CpGs.Rds")
+#dat <- dat %>% dplyr::rename(Infinium.type=Infinium.Probe.Type) %>% select(!methylation.epithelial)
+#colnames(dat) <- gsub("\\.", " ", colnames(dat))
+#rownames(dat) <- NULL
+#t1 <- kable(dat, align=rep('c', 7), "html") %>% kable_paper() %>% column_spec(3,italic=T)
+#kableExtra::save_kable(t1, file = "../0-data/tables/table-main1.html")
+
+#t1 <- dat %>%
+#  gt() %>%
+#  tab_style(
+#    style = list(
+#      cell_text(style = "italic")
+#      ),
+#    locations = cells_body(
+#      columns = Gene
+#    )
+#  ) %>%
+#  tab_style(
+#    style = list(
+#      cell_text(weight = "bold")
+#      ),
+#    locations = cells_column_labels()
+#  ) %>%
+#   tab_options(
+#   table.font.size = 10,
+#   table.font.names = "Arial",
+#   table.width = px(650)
+#   )
+#t1 %>% gtsave("../0-data/tables/table-main1.html")
+
+#pagedown::chrome_print("../0-data/tables/table-main1.html", output = "../0-data/tables/table-main1.pdf")
+
+```
+\includegraphics[trim=2cm 10cm 2cm 0cm, clip]{../0-data/tables/table-main1.pdf}

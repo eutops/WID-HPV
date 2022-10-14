@@ -24,6 +24,14 @@ library(ggbeeswarm)
 library(gghalves)
 library(patchwork)
 library(ggpubr)
+library(openxlsx)
+library(viridis)
+library(ComplexHeatmap)
+library(ggplotify)
+
+# load helper functions
+source("../1-source-codes/plot_roc_dichot.R")
+source("../1-source-codes/GOplot_methyl.R")
 
 knitr::opts_chunk$set(echo=FALSE, message = FALSE, warning = FALSE)
 
@@ -70,7 +78,7 @@ Chiara Herzog\*, Charlotte D. Vavourakis\*, James E. Barrett, Gerlinde Karbon, A
 #   mutate(HPV_genotype2 = case_when(grepl("16", HPV_genotype) ~ "HPV16/18",
 #                                    grepl("18", HPV_genotype) ~ "HPV16/18",
 #                                   HPV_genotype=="no HPV detected" ~ "no HPV detected",
-#                                   HPV_genotype == "other oncogenic HPV" ~ "other oncogenic HPV",
+#                                   HPV_genotype == "other HR" ~ "other oncogenic HPV",
 #                                   is.na(HPV_genotype) ~ "Unknown")) %>%
 #   mutate(HPV_genotype2 = factor(HPV_genotype2, levels = c("HPV16/18",
 #                                                         "other oncogenic HPV",
@@ -80,7 +88,8 @@ Chiara Herzog\*, Charlotte D. Vavourakis\*, James E. Barrett, Gerlinde Karbon, A
 #                        "CIN1",
 #                        "CIN2",
 #                        "CIN3+"))) %>%
-#   select(-HPV_genotype)
+#   mutate(age_group = if_else(age < 30, "below 30", "above 30")) %>%
+#   select(set, HPV, age, age_group,type, HPV_genotype2) #make sure age_group is after age
 # 
 # 
 # tbl <- data %>%
@@ -89,7 +98,8 @@ Chiara Herzog\*, Charlotte D. Vavourakis\*, James E. Barrett, Gerlinde Karbon, A
 #              ~ .x %>%
 #              tbl_summary(by = HPV,
 #                          type = list(age ~ "continuous"),
-#                          label = list(age ~ "Age",
+#                          label = list(age ~ "Age (median, IQR)",
+#                                       age_group ~ "Age group",
 #                                       type ~ "Cytological diagnosis",
 #                                       HPV_genotype2 ~ "HPV subtype")) %>%
 #   modify_header(update = all_stat_cols() ~"**{level}**<br>n = {n}") %>%
@@ -114,111 +124,227 @@ Chiara Herzog\*, Charlotte D. Vavourakis\*, James E. Barrett, Gerlinde Karbon, A
 # pagedown::chrome_print("../0-data/tables/table-s1.html", output = "../0-data/tables/table-s1.pdf")
 ```
 
-\includegraphics[trim=2cm 10cm 2cm 2cm, clip]{../0-data/tables/table-s1.pdf}
+\includegraphics[trim=2cm 10cm 2cm 0cm, clip]{../0-data/tables/table-s1.pdf}
 
 
 \pagebreak
 
-\subsection{Supplementary Table 2. Annotation of the 27 WID-HPV-index CpGs.} CpGs were annotated using the IlluminaHumanMethylationEPICanno.ilm10b4.hg19 R package (Bioconductor). Methylation status relates to mean delta-beta of the epithelial component (inferred immune cell composition = 0) in HPV- compared to HPV+ cytology negative samples in the training set.
+\subsection{Supplementary Table 2. Pathways enriched by the 27 WID-HPV-index CpGs.} Table displays the GO terms within the category Biological Process with more than two significant genes (p-value < 0.05) containing an index CpG. Intermediate terms between the highest and lowest possible level along the combined terms' path of a reduced DAG were removed with the GOxploreR package. Level gives the hierarchy level in the DAG structure, N gives the number of genes in each term.
 
 ```{r, echo=FALSE, message = FALSE, warning = FALSE}
 
-# load summary on index CpGs
-dat <- readRDS("../1-source-codes/analysis-pipeline/6-output/annotation_WID-HPV_index_CpGs.Rds")
-dat <- dat %>% dplyr::rename(Probe.type=Infinium.Probe.Type, Methylation.status=methylation.epithelial) 
-colnames(dat) <- gsub("\\.", " ", colnames(dat))
-rownames(dat) <- NULL
-kable(dat) %>% kableExtra::kable_styling(latex_options = "HOLD_position") %>% column_spec(3,italic=T)
+# commented out, embedded resulted PDF for formatting purposes
+
+# load gene ontology summary on index CpG enriched terms
+#dat <- readRDS("../1-source-codes/analysis-pipeline/8-output/summaryGOindex.Rds")
+#dat$pval <- round(dat$pval, digits=4)
+#dat <- dat %>% dplyr::rename(p.value=pval) 
+#colnames(dat) <- gsub("\\.", "-", colnames(dat))
+#rownames(dat) <- NULL
+#kable(dat,"latex") %>% kableExtra::kable_styling(latex_options = c("HOLD_position","repeat_header","scale_down")) %>% column_spec(6,italic=T)
+
+#t2 <- dat %>%
+#  gt() %>%
+#  tab_style(
+#    style = list(
+#      cell_text(style = "italic")
+#      ),
+#    locations = cells_body(
+#      columns = Genes
+#    )
+#  ) %>%
+#  tab_style(
+#    style = list(
+#      cell_text(weight = "bold")
+#      ),
+#    locations = cells_column_labels()
+#  ) %>%
+#   tab_options(
+#   table.font.size = 10,
+#   table.font.names = "Arial",
+#   table.width = px(650)
+#   )
+#t2 %>% gtsave("../0-data/tables/table-s2.html")
+
+#pagedown::chrome_print("../0-data/tables/table-s2.html", output = "../0-data/tables/table-s2.pdf")
 
 ```
 
+\includegraphics[trim=2cm 10cm 2cm 0cm, clip]{../0-data/tables/table-s2.pdf}
+
+
+```{r, echo=FALSE, include=FALSE, message = FALSE, warning = FALSE}
+
+#commented out. Provided as separate Excel file
+
+#Supplementary Table 3. Annotation of the 114 apoptosis index CpGs. CpGs were annotated using IlluminaHumanMethylationEPICanno.ilm10b4.hg19 R package (Bioconductor). Methylation status relates to mean delta-beta for control cell lines versus cell lines grown in the presence of BH3 mimetics in the training set.
+
+## load summary on index CpGs
+#dat <- readRDS("../1-source-codes/analysis-pipeline/14-output/annotation_apoptosis_index_CpGs.Rds")
+#dat <- dat %>% dplyr::rename(Probe.type=Infinium.Probe.Type, Methylation.status=methylation.mean) 
+#colnames(dat) <- gsub("\\.", " ", colnames(dat))
+#wb <- createWorkbook()
+#addWorksheet(wb, "Anno 114 apoptosis index Cpgs")
+#writeDataTable(wb = wb, sheet = 1, x = dat, rowNames=FALSE) 
+#saveWorkbook(wb, "./Supplementary_Table_4.xlsx")
+
+```
 
 \pagebreak
 
-\subsection{Supplementary Table 3. Annotation of the 114 apoptosis index CpGs.} CpGs were annotated using IlluminaHumanMethylationEPICanno.ilm10b4.hg19 R package (Bioconductor). Methylation status relates to mean delta-beta for control cell lines versus cell lines grown in the presence of BH3 mimetics in the training set.
+```{r, warning = FALSE, message=FALSE, fig.width=15,fig.height=15}
 
-```{r, echo=FALSE, message = FALSE, warning = FALSE}
+# data for this plot was generated in analysis-pipeline/8-output
 
-# load summary on index CpGs
-dat <- readRDS("../1-source-codes/analysis-pipeline/14-output/annotation_apoptosis_index_CpGs.Rds")
-dat <- dat %>% dplyr::rename(Probe.type=Infinium.Probe.Type, Methylation.status=methylation.mean) 
-colnames(dat) <- gsub("\\.", " ", colnames(dat))
-rownames(dat) <- NULL
-kable(dat,"latex", longtable=T) %>% kableExtra::kable_styling(latex_options = c("HOLD_position","repeat_header")) %>% column_spec(3,italic=T)
+# load and arrange GSEA data for bubble plots
+table <- readRDS("../0-data/GSEA_training_WID_HPV/DMPs_vs_all_result_GO.Rds")
+table <- table %>% filter(FDR<0.05) %>% rownames_to_column(var="ID") %>% droplevels # keep only significant pathways
+
+# number of DMPs in all genes
+gene_count <- readRDS("../0-data/GSEA_training_WID_HPV/DMP_count_siggenes_GO.Rds")
+
+#format dataframes for plotting
+gene_count <- gene_count %>% rownames_to_column(var="ID")
+gene_count$DMP_count <- as.numeric(gene_count$DMP_count)
+table <- table %>% 
+  dplyr::rename(Category=ONTOLOGY,Term=TERM,Genes=SigGenesInSet, pval=P.DE, adj_pval=FDR)
+circ <- circle_dat(table, gene_count)
+
+# add number of DMPs per term to circ
+count2 <- c()#init
+terms <- unique(circ$ID)
+for (i in 1:length(terms)){
+  co <- sum(circ$DMP_count[circ$ID==terms[i]])
+  count2 <- c(count2,co)
+}
+df <- data.frame(ID=terms, count2=count2)
+circ <- full_join(circ,df)#combine data
+
+# make a bubble plot
+circ$count <- as.numeric(circ$count)
+circ$pval_log <- -log(circ$pval,10)
+circ$adj_pval_log <- -log(circ$adj_pval, 10)
+circ$term <- paste0(circ$term," (", circ$ID,")")
+
+# subplot go- BB
+p1 <- circ %>%
+  filter(category=="BP") %>% droplevels()%>%
+  arrange(desc(adj_pval_log)) %>%
+  ggplot(aes(x=count, y=count2, size=adj_pval_log, fill=term)) +
+    geom_point(alpha=0.5, shape=21, color="#7A0177") +
+    scale_size(range = c(min(circ$adj_pval_log), 2*max(circ$adj_pval_log))) +
+  scale_fill_brewer(palette = "RdPu", direction=-1) +
+  guides(size=guide_legend(ncol=3))+
+  theme_minimal()+
+  labs(size="-log(adj. p-val)", fill="") +
+  xlab("Number of genes in term")+
+  ylab("Number of DMPs in term")+
+  ggtitle('Enriched GO terms, Biological process')
+
+# subplot go - CC
+p2 <- circ %>%
+  filter(category=="CC") %>% droplevels()%>%
+  arrange(desc(adj_pval_log)) %>%
+  ggplot(aes(x=count, y=count2, size=adj_pval_log, fill=term)) +
+    geom_point(alpha=0.5, shape=21, color="#005A32") +
+    scale_size(range = c(min(circ$adj_pval_log), 2*max(circ$adj_pval_log))) +
+  scale_fill_brewer(palette = "Greens", direction=-1) +
+  guides(size=guide_legend(ncol=3))+
+  theme_minimal()+
+  labs(size="-log(adj. p-val)", fill="") +
+  xlab("Number of genes in term")+
+  ylab("Number of DMPs in term")+
+  ggtitle('Enriched GO terms, Cellular component')
+# note that membrane-enclosed lumen (GO:0031974),organelle lumen (GO:0043233),intracellular organelle lumen (GO:0070013) completely overlap
+
+# subplot chord
+table_BP <- table %>% filter(Category=="BP") %>% droplevels()
+genes_BP <- c() #init
+for (i in 1:length(table_BP$Genes)){
+  out <- unlist(strsplit(table_BP$Genes[i],","))
+  genes_BP <- c(genes_BP,out)
+}
+genes_BP <- unique(genes_BP)
+gene_count_BP <- gene_count %>% filter(ID %in% genes_BP)
+circ_BP <- circle_dat(table_BP, gene_count_BP)
+
+# make matrix for chord plot
+N <- length(table_BP$Term) + 1
+M <- gene_count_BP[,1] 
+mat <- matrix(0, ncol = N, nrow = length(M))
+rownames(mat) <- M
+colnames(mat) <- c(table_BP$ID, 'DMPcount') 
+mat[,N] <- gene_count_BP[,2]
+for (p in 1:(N-1)){
+  dat <- subset(circ_BP, ID == table_BP$ID[p])
+  for (g in 1:length(M)) mat[g, p] <- ifelse(M[g]%in%dat$genes, 1, 0)
+    }
+chord <- mat
+
+p3 <- GOChord(chord,space = 0.02, limit= c(7,0) , gene.order = 'DMPcount', gene.space = 0.25, gene.size=3) # displaying only genes in minimum 7 categories, note that this function still doesn't work for setting limits higher on DMPcount :/
+p3 <- p3 + ggtitle("Genes encompassing minimum 7 enriched GO terms, Biological process")
+
+
+# subplot heatmap
+## read in pre-calculated delta-beta values
+db <- readRDS("../0-data/GSEA_training_WID_HPV/deltabeta_train_dmp.Rds")
+annot_DMP_mM <- readRDS("../0-data/GSEA_training_WID_HPV/DMPs_annot_missMethyl.Rds")
+cpg_8386_annot <- readRDS("../0-data/GSEA_training_WID_HPV/cpg_8386_annot.Rds") #need this file for CpG context information
+
+
+## filter out genes and CpGs from GO term of interest
+genes_GO_interest <- unlist(strsplit(table$Genes[table$Term=="positive regulation of DNA repair"],","))# 43 genes in term
+annot_CpGs_GO_interest <- annot_DMP_mM %>% filter(alias %in% genes_GO_interest) #62 CpGs in 43 genes
+
+## start with arranging factor gene, cause this determines order CpGs in final plot
+gene <- annot_CpGs_GO_interest %>% dplyr::select(cpg,alias)
+gene <- gene[with(gene, order(alias)),]
+gene$alias <- factor(gene$alias, levels=c(unique(gene$alias)))
+order_of_plot <- c(gene$cpg)
+gene <- gene$alias
+
+## make a matrix of the delta-beta values training set (main heatmap)
+mat1 <- db %>% dplyr::select(c(db_epithelial,db_immune,db_mean)) %>% filter(row.names(db) %in% unique(annot_CpGs_GO_interest$cpg))
+mat1 <- mat1[match(order_of_plot, row.names(mat1)),] #match order CpGs
+#identical(row.names(mat1), order_of_plot) #sanity-check
+
+## factor cgi 
+cgi <- cpg_8386_annot %>% filter(Name %in% row.names(mat1)) %>% dplyr::select(Name,Relation_to_Island) %>% droplevels()
+cgi$Relation_to_Island <- factor(cgi$Relation_to_Island, levels=c("N_Shelf","N_Shore","Island","S_Shore","S_Shelf","OpenSea"))
+cgi <- cgi[match(order_of_plot, cgi$Name),] #match order CpGs
+#identical(order_of_plot, as.character(cgi$Name)) #sanity-check
+cgi <- cgi$Relation_to_Island
+
+### factor GO term - could also add the occurence of these genes in other GO terms
+
+### colors
+cgi_col = c("Island" = magma(20)[5] ,"OpenSea" = magma(20)[18], "S_Shelf" = magma(20)[13],  "S_Shore" = magma(20)[9], "N_Shelf" = magma(20)[14],  "N_Shore" = magma(20)[10])
+#col_fun = colorRamp2(c(-0.05, 0, 0.15), c("darkblue", "white", "darkred"))
+
+### heatmap
+ht_list =
+  Heatmap(mat1, col = viridis(100), name = "Delta-beta", row_names_side = "left", row_names_gp = gpar(fontsize = 8), cluster_rows = FALSE, show_column_dend = FALSE, column_names_rot = 60, column_names_centered = TRUE,row_split = c(gene), row_title_rot = 0, row_title_gp = gpar(fontsize=8), cluster_row_slices=FALSE, border=TRUE, column_title = "Genes in term \n Positive Regulation of DNA repair") + 
+  Heatmap(cgi, name = "CGI",  width = unit(5, "mm"), cluster_rows=FALSE,
+    col = cgi_col, column_names_rot = 0, column_names_centered = TRUE)
+
+p4 <- grid2grob(draw(ht_list, merge_legends = TRUE, heatmap_legend_side = "right"))
+
+# print full plot
+layout <- "
+AAADD
+BBBDD
+CCCDD
+CCCDD
+"
+
+plot <- p1 + p2 +p3 + p4 + plot_annotation(tag_levels = 'a') + plot_layout(design = layout)
+
+plot
+
 
 ```
 
-\pagebreak
-
-
-```{r, warning = FALSE, message=FALSE, fig.width=12,fig.height=4}
-## load and arrange CIN data
-dat_cin <- readRDS("../0-data/pheno_P1.Rds")
-
-# adjust WID_HPV for age and ic
-fit <- lm(WID_HPV ~ age + ic, data = dat_cin[dat_cin$type=="Control_NEG" & dat_cin$split == "hold out test set",]) # adjusting using controls only (from hold out test set)
-dat_cin$WID_HPV_adj <- dat_cin$WID_HPV - predict(fit, newdata = dat_cin) # Obtaining adjusted value (residuals) after accounting for differences in age and IC
-
-# arrange factor "type" (sample groups) for uniform plotting
-dat_cin$type <- factor(dat_cin$type, levels = c("Control_NEG", "Control_POS", "CIN1", "CIN2", "CIN3+"))
-type.labs <- c("HPV-ve/cyt-ve", "HPV+ve/cyt-ve", "CIN1", "CIN2", "CIN3+")
-names(type.labs) <- c("Control_NEG", "Control_POS", "CIN1", "CIN2", "CIN3+")
-cin.colours <- c("#00A087FF", "#3C5488FF", "#7E6148FF", "#F39B7FFF", "#DC0000FF")
-cin.colours2 <- c("#00A08799","#3C548899", "#7E614899", "#F39B7F99", "#DC000099")
-names(cin.colours) <- c("Control_NEG", "Control_POS", "CIN1", "CIN2", "CIN3+")
-names(cin.colours2) <- c("Control_NEG", "Control_POS", "CIN1", "CIN2", "CIN3+")
-
-# remove samples used for training and HPV-ve/cyt-ve group
-dat <- dat_cin %>% filter(split != "train") %>% filter(type != "Control_NEG") %>% droplevels()
-
-# frequency subtypes in each group
-# gsub oncogenic HPV for oncogenicHPV
-dat$HPV_genotype <- gsub("HR", "oncogenic HPV", dat$HPV_genotype)
-dat$HPV_genotype <- factor(dat$HPV_genotype, levels=c("HPV 16", "HPV 16 and other oncogenic HPV", "HPV 16 and 18", "HPV 16, 18 and other oncogenic HPV", "HPV 18", "HPV 18 and other oncogenic HPV", "other oncogenic HPV", "no HPV detected")) #arrange levels
-
-genotype.colors <- c("#FF24EC","#E82048","#E8C802","#E88502","#99FF14","#07EB85", "#0781E8","#08EBFF","#808080")
-
-p1 <- dat %>%
-  ggplot(aes(x = type, fill = HPV_genotype)) + 
-  geom_bar(position = "fill") +
-  ylab("Proportion") +
-  xlab("") +
-  labs(fill="") +
-  scale_x_discrete(labels = type.labs) +
-  scale_fill_manual(values=genotype.colors) +
-  theme_minimal()
-
-#dat_tab <- table(dat$HPV_genotype, dat$type)#contingecy table
-#dat_tab <- prop.table(dat_tab, margin=2) #relative frequencies, with sum of each type equal to 1 
-#barplot(dat_tab)
-
-# HPV16+HPV18 in relation to HPV
-dat2 <- dat %>% 
-  filter(!HPV_genotype %in% c("no HPV detected", NA)) %>% #remove samples where no HPV was detected
-  mutate(HPV_genotype2 = case_when(HPV_genotype == "other oncogenic HPV" ~ "other oncogenic HPV", TRUE ~ "HPV16 and/or HPV18")) # rearrange genotypes
-
-genotype2.colors <- c("#FF6347","#0781E8")
-
-p2 <- dat2 %>%
-  ggplot(aes(x = type,
-             y = WID_HPV_adj, fill=HPV_genotype2)) +
-  geom_half_boxplot(width=0.75)+
-  geom_half_point(transformation = position_jitter(), size=0.3,aes(color=HPV_genotype2)) +
-  ylab("WID-HPV") +
-  xlab("") +
-  labs(fill="", color="") +
-  scale_x_discrete(labels = type.labs) +
-  scale_fill_manual(values=genotype2.colors) +
-  scale_color_manual(values=genotype2.colors) +
-  geom_hline(yintercept=0, linetype="dashed", color = "black")
-
-(plot <- p1 + p2 + plot_annotation(tag_levels = 'a'))
-
-```
-
-\subsection{Supplementary Figure 1. Stratified analysis by oncogenic HPV subtypes.}
-
-**A** Proportion of HPV subtypes detected by qPCR for each sample group defined in the CIN dataset. Samples used for training the WID-HPV index were excluded. Other oncogenic HPV subtypes detected were 31, 33, 35, 39, 45, 51, 52, 56, 58, 59, 66, 68, or a combination thereof. **B** Performance of the WID-HPV in HPV16/18 positive samples versus other oncogenic HPV genotypes in the CIN dataset. Samples used for index training and those where no HPV was detected were excluded. Box plots give median and interquartile range, with whiskers showing 1.5 times the 25th and 75th percentile and dots the outliers.
+\subsection{Supplementary Figure 1. Differential methylation and gene ontology analysis in HPV-infected and -uninfected samples.}
 
 \pagebreak
 

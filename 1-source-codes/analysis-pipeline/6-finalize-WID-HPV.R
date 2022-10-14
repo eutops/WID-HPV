@@ -125,7 +125,7 @@ db <- db %>%
   filter(row.names(db) %in% index_CpGs)%>% # retain only index-Cpgs
   mutate(methylation.epithelial = case_when(db_epithelial <0 ~ "hypomethylated",db_epithelial >0 ~ "hypermethylated")) %>%
   droplevels
-db <- db %>% select(methylation.epithelial) %>% rownames_to_column(var="Name")
+db <- db %>% select(db_epithelial,methylation.epithelial) %>% rownames_to_column(var="Name")
 
 ## combine annotation and delta-beta info
 df <- full_join(df, db)
