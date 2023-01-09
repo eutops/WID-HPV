@@ -1,5 +1,5 @@
 
-# calculate the WID-HPV for the full dataset and save along with original phenotypic information and estimated ic content
+# calculate the WID-HPV for the full cytology dataset and save along with original phenotypic information and estimated ic content
 
 dir.create("7-output") #make dir for output
 

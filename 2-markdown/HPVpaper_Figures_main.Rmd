@@ -274,6 +274,7 @@ cin3_all <- signif(p.adjust(wilcox.test(tmp[ref,]$WID_HPV_adj,
                     tmp[comp,]$WID_HPV_adj)$p.value,
                      n = 5,
                      method = "bonferroni"),2)
+cin3_all <- sub("e","%.% 10^",cin3_all)#fix superscript scientific notation
  
 p1 <- tmp %>%
    filter(split != "training set") %>%
@@ -300,9 +301,10 @@ p1 <- tmp %>%
    annotate("text",
             x = 4,
             y = 4.2,
-            label = paste0("p = ", cin3_all),
+            label = paste0("p == ", cin3_all),
             size = 3.1,
-            colour = "gray40")
+            colour = "gray40",
+            parse=TRUE)
 
 # remove samples used for training and HPV-ve/cyt-ve group
 dat <- dat_cin %>% filter(split != "train") %>% filter(type != "Control_NEG") %>% droplevels()
@@ -353,9 +355,17 @@ p3 <- dat2 %>%
 # correlation WID-HPV and pcgtage (Figure 2D)
 dat_cin_notrain <- dat_cin %>% filter(split != "training set") %>% droplevels()
 
-p4 <- dat_cin_notrain %>%
+#first save correlation coefficients and p-values so can format them as wanted
+dat3 <- dat_cin_notrain %>%
   filter(type %in% c("Control_POS","CIN1","CIN2","CIN3+")) %>%
-  droplevels() %>%
+  droplevels()
+
+tauCor <- round(cor(dat3$pcgtage,dat3$WID_HPV_adj, method="kendall"),2)
+tauPval <- sub("e","%.% 10^",signif(cor.test(dat3$pcgtage,dat3$WID_HPV_adj, method="kendall")$p.value,2))
+rhoCor <- round(cor(dat3$pcgtage,dat3$WID_HPV_adj, method="spearman"),2)
+rhoPval <- sub("e","%.% 10^",signif(cor.test(dat3$pcgtage,dat3$WID_HPV_adj, method="spearman")$p.value,2))
+
+p4 <- dat3 %>%
   ggplot(aes(x = pcgtage,
              y = WID_HPV_adj)) +
   geom_point(aes(color=type), size=0.6) +
@@ -363,15 +373,33 @@ p4 <- dat_cin_notrain %>%
   scale_x_continuous(trans="log10") +
   theme_classic() +
   theme(panel.grid = element_blank()) +
-  stat_cor(cor.coef.name ="tau", method="kendall", label.x.npc = "middle", size=3, label.y=2.5) +
-  stat_cor(cor.coef.name ="rho", method="spearman", label.x.npc = "middle", size=3,label.y=2) +
-  labs(y = "WID-HPV", x = "log(pcgtAge)", colour="")
+  labs(y = "WID-HPV", x = "log(pcgtAge)", colour="") +
+  annotate("text",
+           x = 0.2,
+           y = 2.5,
+           label = paste0(expression(tau), "==", tauCor, "~(", "p == ", tauPval, ")"),
+           size = 3.1,
+           colour = "gray40",
+           parse = TRUE) +
+  annotate("text",
+           x = 0.2,
+           y = 2,
+           label = paste0(expression(rho), "==", rhoCor, "~(", "p == ", rhoPval, ")"),
+           size = 3.1,
+           colour = "gray40",
+           parse = TRUE)
 
 layout <- "
 AB
 CD"
 
-(plot <- p1 + p2 + p3 + p4 + plot_annotation(tag_levels = 'A') + plot_layout(design=layout))
+plot <- p1 + p2 + p3 + p4 + plot_annotation(tag_levels = 'A') + plot_layout(design=layout)
+
+plot
+
+ggsave(plot, filename = "../0-data/figures/Fig_2.pdf",
+        width = 11,
+        height = 7, dpi = 300)
 
 ```
 
@@ -388,6 +416,7 @@ CD"
 # 
 # cin3_all <- signif(wilcox.test(dat_cin_notrain[ref,]$median_methylation_apoptosis,
 #                                dat_cin_notrain[comp,]$median_methylation_apoptosis)$p.value,2)
+# cin3_all <- sub("e","%.% 10^",cin3_all)#fix superscript scientific notation
 # 
 # medapop <- dat_cin_notrain %>%
 #   ggplot(aes(x = type,
@@ -412,9 +441,10 @@ CD"
 #   annotate("text",
 #            x = 4,
 #            y = 0.046,
-#            label = paste0("p = ", cin3_all),
+#            label = paste0("p == ", cin3_all),
 #            size = 3.1,
-#            colour = "gray40")
+#            colour = "gray40",
+#            parse=TRUE)
 # 
 # ggsave(medapop, filename = "../0-data/figures/fig3b.pdf",
 #        width = 5.5,
@@ -426,6 +456,7 @@ CD"
 # comp <- dat_cin_notrain$type == "CIN3+"
 # cin3_all <- signif(wilcox.test(dat_cin_notrain[ref,]$index_apoptosis,
 #                     dat_cin_notrain[comp,]$index_apoptosis)$p.value,2)
+# cin3_all <- sub("e","%.% 10^",cin3_all)#fix superscript scientific notation
 # 
 # apopind <- dat_cin_notrain %>%
 #   ggplot(aes(x = type,
@@ -450,9 +481,10 @@ CD"
 #   annotate("text",
 #            x = 4,
 #            y = -4.75,
-#            label = paste0("p = ", cin3_all),
+#            label = paste0("p == ", cin3_all),
 #            size = 3.1,
-#            colour = "gray40")
+#            colour = "gray40",
+#            parse = TRUE)
 # ggsave(apopind, filename = "../0-data/figures/fig3c.pdf",
 #        width = 5.5,
 #        height = 3.5, dpi = 300)
@@ -460,18 +492,41 @@ CD"
 # 
 # 
 # # correlation WID-HPV and apoptosis index
-# apopcorr <- dat_cin_notrain %>%
-#   filter(type %in% c("Control_POS","CIN1","CIN2","CIN3+")) %>%
-#   droplevels() %>%
+# 
+##first save correlation coefficients and p-values so can format them as wanted
+#dat3 <- dat_cin_notrain %>%
+#  filter(type %in% c("Control_POS","CIN1","CIN2","CIN3+")) %>%
+#  droplevels()
+#
+#tauCor <- round(cor(dat3$index_apoptosis,dat3$WID_HPV_adj, method="kendall"),2)
+#tauPval <- sub("e","%.% 10^",signif(cor.test(dat3$index_apoptosis,dat3$WID_HPV_adj, method="kendall")$p.value,2))
+#rhoCor <- round(cor(dat3$index_apoptosis,dat3$WID_HPV_adj, method="spearman"),2)
+#rhoPval <- sub("e","%.% 10^",signif(cor.test(dat3$index_apoptosis,dat3$WID_HPV_adj, method="spearman")$p.value,2))
+#
+#apopcorr <- dat3 %>%
 #   ggplot(aes(x = index_apoptosis,
 #              y = WID_HPV_adj)) +
 #   geom_point(aes(colour=type), size=0.6) +
-#    scale_color_manual(name="",labels=type.labs.3,values=cin.colours3) +
-#   stat_cor(cor.coef.name ="tau", method="kendall", label.x = -17, size=3, label.y=2.5) +
-#   stat_cor(cor.coef.name ="rho", method="spearman", label.x = -17, size=3,label.y=2) +
+#   scale_color_manual(name="",labels=type.labs.3,values=cin.colours3) +
 #   theme_classic() +
-#   labs(y = "WID-HPV", x = "Apoptosis index", colour="")
-# ggsave(apopcorr, filename = "../0-data/figures/fig3d.pdf",
+#   labs(y = "WID-HPV", x = "Apoptosis index", colour="") +
+#  annotate("text",
+#           x = -15,
+#           y = 2.5,
+#           label = paste0(expression(tau), "==", tauCor, "~(", "p == ", tauPval, ")"),
+#           size = 3.1,
+#           colour = "gray40",
+#           parse = TRUE) +
+#  annotate("text",
+#           x = -15,
+#           y = 2,
+#           label = paste0(expression(rho), "==", rhoCor, "~(", "p == ", rhoPval, ")"),
+#           size = 3.1,
+#           colour = "gray40",
+#           parse = TRUE)
+#
+#
+#ggsave(apopcorr, filename = "../0-data/figures/fig3d.pdf",
 #        width = 5.5,
 #        height = 3.5, dpi = 300)
 

@@ -1,5 +1,5 @@
 
-#calculate IC content and IC subtypes for full CIN dataset (P1)
+#calculate IC content and IC subtypes for full cytology dataset (P1)
 
 library(EpiDISH)
 library(tidyverse)

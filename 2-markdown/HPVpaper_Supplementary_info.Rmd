@@ -47,8 +47,10 @@ Chiara Herzog\*, Charlotte D. Vavourakis\*, James E. Barrett, Gerlinde Karbon, A
 
 \subsection{Supplementary Table 1. Participant characteristics.}
 
+Adenocarcinoma in situ and invasive cervical cancer are grouped together with CIN3 as CIN3+ for majority of figures in this article.
+
 ```{r}
-## code commented out - saved as PDF for formatting. code below describes step for generating tables
+# # code commented out - saved as PDF for formatting. code below describes step for generating tables
 # library(dplyr)
 # library(tidyverse)
 # library(gtsummary)
@@ -87,9 +89,10 @@ Chiara Herzog\*, Charlotte D. Vavourakis\*, James E. Barrett, Gerlinde Karbon, A
 #   mutate(type = factor(type, levels = c("No cytological changes",
 #                        "CIN1",
 #                        "CIN2",
-#                        "CIN3+"))) %>%
+#                        "CIN3+")),
+#          type_detail = factor(type_detail, levels = c("Control", "CIN1", "CIN2", "CIN3", "Adenocarcinoma in situ", "Invasive cervical cancer"))) %>%
 #   mutate(age_group = if_else(age < 30, "below 30", "above 30")) %>%
-#   select(set, HPV, age, age_group,type, HPV_genotype2) #make sure age_group is after age
+#   select(set, HPV, age, age_group,type_detail, HPV_genotype2) #make sure age_group is after age
 # 
 # 
 # tbl <- data %>%
@@ -100,7 +103,7 @@ Chiara Herzog\*, Charlotte D. Vavourakis\*, James E. Barrett, Gerlinde Karbon, A
 #                          type = list(age ~ "continuous"),
 #                          label = list(age ~ "Age (median, IQR)",
 #                                       age_group ~ "Age group",
-#                                       type ~ "Cytological diagnosis",
+#                                       type_detail ~ "Cytological diagnosis",
 #                                       HPV_genotype2 ~ "HPV subtype")) %>%
 #   modify_header(update = all_stat_cols() ~"**{level}**<br>n = {n}") %>%
 #   bold_labels() %>%
@@ -124,7 +127,7 @@ Chiara Herzog\*, Charlotte D. Vavourakis\*, James E. Barrett, Gerlinde Karbon, A
 # pagedown::chrome_print("../0-data/tables/table-s1.html", output = "../0-data/tables/table-s1.pdf")
 ```
 
-\includegraphics[trim=2cm 10cm 2cm 0cm, clip]{../0-data/tables/table-s1.pdf}
+\includegraphics[trim=2cm 9cm 2cm 0cm, clip]{../0-data/tables/table-s1.pdf}
 
 
 \pagebreak
@@ -348,6 +351,219 @@ plot
 
 \pagebreak
 
+```{r, warning = FALSE, message=FALSE, fig.width=12, fig.height=8}
+
+## load and arrange CIN data
+dat_cin <- readRDS("../0-data/pheno_P1.Rds")
+
+# adjust WID_HPV for age and ic
+fit <- lm(WID_HPV ~ age + ic, data = dat_cin[dat_cin$type=="Control_NEG" & dat_cin$split == "hold out test set",]) # adjusting using controls only (from hold out test set)
+dat_cin$WID_HPV_adj <- dat_cin$WID_HPV - predict(fit, newdata = dat_cin) # Obtaining adjusted value (residuals) after accounting for differences in age and IC
+
+# arrange factor "type" (sample groups) for uniform plotting
+dat_cin <- dat_cin |> 
+  dplyr::mutate(type = case_when(type_detail == "Adenocarcinoma in situ" ~ "AIS",
+                                 type_detail == "Invasive cervical cancer" ~ "CC",
+                                 type == "CIN3+" & !type_detail %in% c("Adenocarcinoma in situ", "Invasive cervical cancer") ~ "CIN3",
+                                 TRUE ~ as.character(type)),
+                type = factor(type, levels = c("Control_NEG",
+                                               "Control_POS",
+                                               "CIN1",
+                                               "CIN2",
+                                               "CIN3",
+                                               "AIS",
+                                               "CC")))
+
+type.labs <- c("HPV-ve/cyt-ve",
+               "HPV+ve/cyt-ve",
+               "CIN1", "CIN2", "CIN3", "AIS", "CC")
+names(type.labs) <- c("Control_NEG", "Control_POS", "CIN1", "CIN2", "CIN3", "AIS", "CC")
+type.labs.3 <- c("HPV+/cyt-", "CIN1", "CIN2", "CIN3", "AIS", "CC") #HPV-v/cyt-ve removed
+names(type.labs.3) <- c("Control_POS", "CIN1", "CIN2", "CIN3", "AIS", "CC")
+cin.colours <- c("#00A087FF", "#3C5488FF", "#7E6148FF", "#F39B7FFF", "#DC0000FF", "#7a0f0fFF", "#421a0cFF")
+cin.colours2 <- c("#00A08799","#3C548899", "#7E614899", "#F39B7F99", "#DC000099", "#7a0f0f99", "#421a0c99")
+cin.colours3 <- c("#3C548899", "#7E614899", "#F39B7F99", "#DC000099", "#7a0f0f99", "#421a0c99")
+names(cin.colours) <- c("Control_NEG", "Control_POS", "CIN1", "CIN2", "CIN3", "AIS", "CC")
+names(cin.colours2) <- c("Control_NEG", "Control_POS", "CIN1", "CIN2", "CIN3", "AIS", "CC")
+names(cin.colours3) <- c("Control_POS", "CIN1", "CIN2", "CIN3", "AIS", "CC")
+
+# subplot violins ctrls -> CIN3+ (Figure 2A)
+# type.labs[names(type.labs) == "Control_NEG"] <- "HPV-"
+# type.labs[names(type.labs) == "Control_POS"] <- "HPV+"
+
+tmp <- dat_cin[dat_cin$split != "training set",]
+# HPV+/HPV-
+ref <- tmp$type == "Control_NEG"
+comp <- tmp$type == "Control_POS"
+hpvpos <- signif(p.adjust(wilcox.test(tmp[ref,]$WID_HPV_adj,tmp[comp,]$WID_HPV_adj)$p.value,
+                          n = 5,
+                          method = "bonferroni"), 2)
+
+comp <- tmp$type == "CIN1"
+cin1 <- signif(p.adjust(wilcox.test(tmp[ref,]$WID_HPV_adj,tmp[comp,]$WID_HPV_adj)$p.value,
+                        n = 5,
+                        method = "bonferroni"), 2)
+
+comp <- tmp$type == "CIN2"
+cin2 <- signif(p.adjust(wilcox.test(tmp[ref,]$WID_HPV_adj,tmp[comp,]$WID_HPV_adj)$p.value,
+                        n = 5,
+                        method = "bonferroni"), 2)
+
+comp <- tmp$type == "CIN3"
+cin3 <- p.adjust(wilcox.test(tmp[ref,]$WID_HPV_adj,tmp[comp,]$WID_HPV_adj)$p.value,
+                 n = 5,
+                 method = "bonferroni")
+
+comp <- tmp$type == "AIS"
+ais <- p.adjust(wilcox.test(tmp[ref,]$WID_HPV_adj,tmp[comp,]$WID_HPV_adj)$p.value,
+                 n = 5,
+                 method = "bonferroni")
+
+comp <- tmp$type == "CC"
+cc <- p.adjust(wilcox.test(tmp[ref,]$WID_HPV_adj,tmp[comp,]$WID_HPV_adj)$p.value,
+                 n = 5,
+                 method = "bonferroni")
+
+# All + v CIN3+ is significant
+ref <- tmp$type %in% c("Control_POS", "CIN1", "CIN2")
+comp <- tmp$type %in% c("CIN3", "AIS", "CC")
+cin3_all <- signif(p.adjust(wilcox.test(tmp[ref,]$WID_HPV_adj,
+                                        tmp[comp,]$WID_HPV_adj)$p.value,
+                            n = 5,
+                            method = "bonferroni"),2)
+cin3_all <- sub("e","%.% 10^",cin3_all)#fix superscript scientific notation
+
+p1 <- tmp |> 
+  filter(split != "training set") |> 
+  droplevels() |> 
+  ggplot(aes(x = type,
+             y = WID_HPV_adj,
+             fill=type)) +
+  gghalves::geom_half_boxplot(width=0.2)+ 
+  gghalves::geom_half_violin() +
+  geom_half_point(transformation = position_jitter(),size=0.3,aes(color=type)) +
+  ylab("WID-HPV") +
+  xlab("") +
+  scale_fill_manual(name="",labels=type.labs,values=cin.colours2) +
+  scale_color_manual(name="",labels=type.labs,values=cin.colours2) +
+  geom_hline(yintercept=0,linetype="dashed",color = "black") +
+  theme_classic() +
+  theme(axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
+  annotate("segment",
+           x = c(2, 4, 2, 3, 3, 5),
+           xend = c(2, 4, 4, 3, 5, 5),
+           y = c(3.5, 3.5, 3.7, 3.7, 4, 4),
+           yend = c(3.7, 3.7, 3.7, 4, 4, 3.2),
+           size = 0.5) +
+  annotate("text",
+           x = 4,
+           y = 4.2,
+           label = paste0("p == ", cin3_all),
+           size = 3.1,
+           colour = "gray40",
+           parse = TRUE)
+
+
+# remove samples used for training and HPV-ve/cyt-ve group
+dat <- dat_cin %>% filter(split != "train") %>% filter(type != "Control_NEG") %>% droplevels()
+
+# frequency subtypes in each group (Figure 2B)
+# gsub oncogenic HPV for oncogenic HPV
+dat$HPV_genotype <- gsub("HR", "oncogenic HPV", dat$HPV_genotype)
+dat$HPV_genotype <- factor(dat$HPV_genotype, levels=c("HPV 16", "HPV 16 and other oncogenic HPV", "HPV 16 and 18", "HPV 16, 18 and other oncogenic HPV", "HPV 18", "HPV 18 and other oncogenic HPV", "other oncogenic HPV", "no HPV detected")) #arrange levels
+
+# genotype.colors <- c("#D9565C", "#EA7B7C", "#EF9798", "#CFAAAB", "#39B4AE", "#109DB7", "#0C6EA5", "#172869")
+genotype.colors <- c("#B25D91", "#C37AAA", "#DAA2C9", "#D0C4DE", "#39B8B6", "#109DB7", "#0C6EA5", "#172869")
+
+p2 <- dat %>%
+  ggplot(aes(x = type, fill = HPV_genotype)) + 
+  geom_bar(position = "fill") +
+  ylab("Proportion") +
+  xlab("") +
+  labs(fill="") +
+  scale_x_discrete(labels = type.labs) +
+  scale_fill_manual(values=genotype.colors) +
+  theme_minimal() +
+  theme(axis.text.x=element_text(angle=60, hjust=1))
+
+#dat_tab <- table(dat$HPV_genotype, dat$type)#contingecy table
+#dat_tab <- prop.table(dat_tab, margin=2) #relative frequencies, with sum of each type equal to 1 
+#barplot(dat_tab)
+
+# HPV16+HPV18 in relation to HPV (Figure 2C)
+dat2 <- dat %>% 
+  filter(!HPV_genotype %in% c("no HPV detected", NA)) %>% #remove samples where no HPV was detected
+  mutate(HPV_genotype2 = case_when(HPV_genotype == "other oncogenic HPV" ~ "other oncogenic HPV", TRUE ~ "HPV16 and/or HPV18")) # rearrange genotypes
+
+genotype2.colors <- c("#C37AAA","#0C6EA5")
+
+p3 <- dat2 %>%
+  ggplot(aes(x = type,
+             y = WID_HPV_adj, fill=HPV_genotype2)) +
+  geom_half_boxplot()+
+  geom_half_point(transformation = position_jitter(),
+                  size=0.3,aes(color=HPV_genotype2)) +
+  ylab("WID-HPV") +
+  xlab("") +
+  labs(fill="", color="") +
+  scale_x_discrete(labels = type.labs) +
+  scale_fill_manual(values=genotype2.colors) +
+  scale_color_manual(values=genotype2.colors) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  theme(axis.text.x=element_text(angle=60, hjust=1)) 
+
+# correlation WID-HPV and pcgtage (Figure 2D)
+dat_cin_notrain <- dat_cin %>% filter(split != "training set") %>% droplevels()
+
+#first save correlation coefficients and p-values so can format them as wanted
+dat3 <- dat_cin_notrain %>%
+  filter(type %in% c("Control_POS","CIN1","CIN2","CIN3", "AIS", "CC")) %>%
+  droplevels()
+
+tauCor <- round(cor(dat3$pcgtage,dat3$WID_HPV_adj, method="kendall"),2)
+tauPval <- sub("e","%.% 10^",signif(cor.test(dat3$pcgtage,dat3$WID_HPV_adj, method="kendall")$p.value,2))
+rhoCor <- round(cor(dat3$pcgtage,dat3$WID_HPV_adj, method="spearman"),2)
+rhoPval <- sub("e","%.% 10^",signif(cor.test(dat3$pcgtage,dat3$WID_HPV_adj, method="spearman")$p.value,2))
+
+p4 <- dat3 %>%
+  ggplot(aes(x = pcgtage,
+             y = WID_HPV_adj)) +
+  geom_point(aes(color=type), size=0.6) +
+  scale_color_manual(name="",labels=type.labs.3,values=cin.colours3) +
+  scale_x_continuous(trans="log10") +
+  theme_classic() +
+  theme(panel.grid = element_blank()) +
+  labs(y = "WID-HPV", x = "log(pcgtAge)", colour="") +
+  annotate("text",
+           x = 0.2,
+           y = 2.5,
+           label = paste0(expression(tau), "==", tauCor, "~(", "p == ", tauPval, ")"),
+           size = 3.1,
+           colour = "gray40",
+           parse = TRUE) +
+  annotate("text",
+           x = 0.2,
+           y = 2,
+           label = paste0(expression(rho), "==", rhoCor, "~(", "p == ", rhoPval, ")"),
+           size = 3.1,
+           colour = "gray40",
+           parse = TRUE)
+
+layout <- "
+AB
+CD"
+
+plot <- p1 + p2 + p3 + p4 + plot_annotation(tag_levels = 'A') + plot_layout(design=layout)
+
+plot
+
+```
+
+\subsection{Supplementary Figure 2. WID-HPV in relation to CIN, cancer, HPV oncogenic subtype and replicative age.}
+
+\pagebreak
+
 ```{r, warning = FALSE, message=FALSE, fig.width=15,fig.height=12}
 
 cell_cols <- c("#7A12FF","#1E82FF","#10D0E8","#1CFFB0")
@@ -449,12 +665,132 @@ p1 + p2 +p3 + plot_annotation(tag_levels = 'a') + legend + plot_layout(design=la
 
 ```
 
-\subsection{Supplementary Figure 2. Experimental design of BH3 mimetics treatment and development of the apoptosis index.}
+\subsection{Supplementary Figure 3. Experimental design of BH3 mimetics treatment and development of the apoptosis index.}
 
 **A** Four cancer cell lines were grown in the presence of the BH3 mimetics S63845 and ABT-737 and collected at two different time points, reflecting early and late stages of apoptosis, respectively. "Control" cancer cell lines were grown in the presence of DMSO and pooled for the two time points, as no significant apoptosis was expected at either timepoints when incubating only in DMSO. **B** Apoptosis index performance in the test set and training set. **C** Apoptosis index calculated for an EPIC methylation array dataset of high-grade serous ovarian cancer cell lines in which apoptosis was induced with azacitidine and carboplatin treatment. 10-30% apoptosis were reported by the authors of the original study (Wong-Brown et al., 2022). 
 
 \pagebreak
 
-\includegraphics[trim=0 0cm 0 0, clip]{../0-data/figures/Fig_S3.pdf}
+```{r, warning = FALSE, message=FALSE, fig.width=15,fig.height=12}
 
-\subsection{Supplementary Figure 3. Overview of cervical screening samples used in this study.}
+# apoptosis hallmark genes
+dat_cin_notrain  <- dat_cin%>% filter(split != "training set") %>% droplevels()
+ref <- dat_cin_notrain$type %in% c("Control_POS", "CIN1", "CIN2")
+comp <- dat_cin_notrain$type %in% c("CIN3", "AIS", "CC")
+
+cin3_all <- signif(wilcox.test(dat_cin_notrain[ref,]$median_methylation_apoptosis,
+                               dat_cin_notrain[comp,]$median_methylation_apoptosis)$p.value,2)
+cin3_all <- sub("e","%.% 10^",cin3_all)#fix superscript scientific notation
+
+medapop <- dat_cin_notrain %>%
+  ggplot(aes(x = type,
+             y = median_methylation_apoptosis, fill=type)) +
+  geom_half_boxplot(width=0.2)+
+  geom_half_violin() +
+  geom_half_point(transformation = position_jitter(), nudge=0.05, size=0.3,aes(color=type)) +
+  ylab("Median methylation\n(apoptosis gene promoters)") +
+  xlab("") +
+  scale_x_discrete(labels = type.labs) +
+  scale_fill_manual(name="", labels=type.labs, values=cin.colours2)  +
+  theme_classic() +
+  scale_color_manual(name="", labels=type.labs, values=cin.colours2) +
+  theme(axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())  +
+  annotate("segment",
+           x = c(2, 4, 2, 3, 3, 5),
+           xend = c(2, 4, 4, 3, 5, 5),
+           y = c(0.036, 0.036, 0.038, 0.038, 0.045, 0.045),
+           yend = c(0.038, 0.038, 0.038, 0.045, 0.045, 0.044),
+           size = 0.5) +
+  annotate("text",
+           x = 4,
+           y = 0.046,
+           label = paste0("p == ", cin3_all),
+           size = 3.1,
+           colour = "gray40",
+           parse=TRUE)
+
+# apoptosis index CIN data
+ref <- dat_cin_notrain$type %in% c("Control_POS", "CIN1", "CIN2")
+comp <- dat_cin_notrain$type %in% c("CIN3", "AIS", "CC")
+cin3_all <- signif(wilcox.test(dat_cin_notrain[ref,]$index_apoptosis,
+                    dat_cin_notrain[comp,]$index_apoptosis)$p.value,2)
+cin3_all <- sub("e","%.% 10^",cin3_all)#fix superscript scientific notation
+
+apopind <- dat_cin_notrain %>%
+  ggplot(aes(x = type,
+             y = index_apoptosis, fill=type)) +
+  geom_half_boxplot(width=0.2)+
+  geom_half_violin() +
+  geom_half_point(transformation = position_jitter(), nudge=0.05, size=0.3,aes(color=type)) +
+  ylab("Apoptosis index") +
+  xlab("") +
+  scale_x_discrete(labels = type.labs) +
+  scale_fill_manual(name="", labels=type.labs, values=cin.colours2) +
+  scale_color_manual(name="", labels=type.labs, values=cin.colours2) +
+  theme_classic() +
+  theme(axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
+  annotate("segment",
+           x = c(2, 4, 2, 3, 3, 5),
+           xend = c(2, 4, 4, 3, 5, 5),
+           y = c(-6.25, -6, -5.5, -5.5, -5.25, -5.25),
+           yend = c(-5.5, -5.5, -5.5, -5.25, -5.25, -5.5),
+           size = 0.5) +
+  annotate("text",
+           x = 4,
+           y = -4.75,
+           label = paste0("p == ", cin3_all),
+           size = 3.1,
+           colour = "gray40",
+           parse=TRUE)
+
+## correlation WID-HPV and apoptosis index
+
+#first save correlation coefficients and p-values so can format them as wanted
+dat3 <- dat_cin_notrain %>%
+  filter(type %in% c("Control_POS","CIN1","CIN2","CIN3", "AIS", "CC")) %>%
+  droplevels()
+
+tauCor <- round(cor(dat3$index_apoptosis,dat3$WID_HPV_adj, method="kendall"),2)
+tauPval <- sub("e","%.% 10^",signif(cor.test(dat3$index_apoptosis,dat3$WID_HPV_adj, method="kendall")$p.value,2))
+rhoCor <- round(cor(dat3$index_apoptosis,dat3$WID_HPV_adj, method="spearman"),2)
+rhoPval <- sub("e","%.% 10^",signif(cor.test(dat3$index_apoptosis,dat3$WID_HPV_adj, method="spearman")$p.value,2))
+
+apopcorr <- dat3 %>%
+  ggplot(aes(x = index_apoptosis,
+             y = WID_HPV_adj)) +
+  geom_point(aes(colour=type), size=0.6) +
+   scale_color_manual(name="",labels=type.labs.3,values=cin.colours3) +
+  theme_classic() +
+  labs(y = "WID-HPV", x = "Apoptosis index", colour="") +
+  annotate("text",
+           x = -15,
+           y = 2.5,
+           label = paste0(expression(tau), "==", tauCor, "~(", "p == ", tauPval, ")"),
+           size = 3.1,
+           colour = "gray40",
+           parse = TRUE) +
+  annotate("text",
+           x = -15,
+           y = 2,
+           label = paste0(expression(rho), "==", rhoCor, "~(", "p == ", rhoPval, ")"),
+           size = 3.1,
+           colour = "gray40",
+           parse = TRUE)
+
+layout <- "
+AB
+C#"
+
+(plot <- medapop + apopind + apopcorr + plot_annotation(tag_levels = 'A') + plot_layout(design=layout))
+
+```
+
+\subsection{Supplementary Figure 4. WID-HPV correlation with apoptosis and cancer.}
+
+\pagebreak
+
+\includegraphics[trim=0 0cm 0 0, clip]{../0-data/figures/Fig_S5.pdf}
+
+\subsection{Supplementary Figure 5. Overview of cervical screening samples used in this study.}
